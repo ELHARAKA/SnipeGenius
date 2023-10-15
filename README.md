@@ -27,6 +27,43 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 ###
 - trade_history.log: is SnipeGenius' trade log, recording trade-related data and events
 
+## Setup & Usage
+
+### Prerequisites
+- Python 3.x installed on your machine.
+- [web3.py](https://web3py.readthedocs.io/) and [Requests](https://docs.python-requests.org/) libraries installed.
+
+### Installation
+1. Clone the SnipeGenius repository:
+```
+git clone https://github.com/ELHARAKA/SnipeGenius.git
+```
+2. Navigate to the SnipeGenius directory:
+```
+cd SnipeGenius
+```
+3. Install the necessary Python libraries:
+```
+pip3 install web3 requests
+```
+### Configuration
+1. Update `config.py` with your wallet details and ApiKey. Get your apikey [BscScan](https://bscscan.com/myapikey).
+
+```python
+BSCSCAN_API_KEY = "Your_API_Key"
+my_address = '0xYour_Wallet_Address'
+private_key = '0xYour_Private_Key'
+```
+
+### Run SnipeGenius:
+```bash
+python3 snipe.py
+
+OR:
+
+sudo python3 snipe.py
+```
+
 ## Contribution
 We warmly welcome contributions from the community. Whether you are a veteran developer or a newcomer, your input is highly valued. Here are some ways you can contribute to SnipeGenius:
 
