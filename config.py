@@ -13,19 +13,10 @@ Unauthorized use, duplication, modification, or distribution is strictly prohibi
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-import sys
-import json
-import logging
-from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from imports import *
 
 # Configure logging for trade history to a file.
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 trade_logger = logging.getLogger('trade_logger')
 trade_handler = logging.FileHandler('trade_history.log')
 trade_handler.setLevel(logging.INFO)
@@ -38,22 +29,22 @@ if w3.is_connected():
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 else:
     logging.error("Node connection failed.")
-    sys.exit(1)
+    exit(1)
 
-MY_ADDRESS = '0xYour_Wallet_Address'
-PRIVATE_KEY = '0xYour_Private_Key'
-WBNB_ADDRESS = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
-ROUTER_ADDRESS = '0x10ED43C718714eb63d5aA57B78B54704E256024E'
-FACTORY_ADDRESS = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
-PAIR_CREATED_TOPIC = '0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9'
-MINIMUM_SLEEP = 3
+BSCSCAN_API_KEY = "YOUR_API_KEY"
+my_address = '0xYour_Wallet_Address'
+private_key = '0xYour_Private_Key'
+wbnb_address = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+router_address = '0x10ED43C718714eb63d5aA57B78B54704E256024E'
+factory_address = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
+minimum_sleep = 3
 
-# BSCSCAN API
-BSCSCAN_API_KEY = "YOUR_API_KEY" # Obtain it from https://bscscan.com/myapikey
+#Event Topic for "CreatedPair"
+pair_created_topic = '0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9'
 
+# Load ABI (Application Binary Interface) from a JSON file
 def load_abi_from_file(filename):
-    """Load ABI (Application Binary Interface) from a JSON file."""
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, 'r') as f:
         return json.load(f)
 
 # ABI Files
@@ -63,11 +54,11 @@ pair_abi = load_abi_from_file('pair_abi.json')
 wbnb_abi = load_abi_from_file('wbnb_abi.json')
 
 # Create Instances
-router = w3.eth.contract(address=ROUTER_ADDRESS, abi=router_abi)
-wbnb = w3.eth.contract(address=WBNB_ADDRESS, abi=wbnb_abi)
+router = w3.eth.contract(address=router_address, abi=router_abi)
+wbnb = w3.eth.contract(address=wbnb_address, abi=wbnb_abi)
 
 # Create filter for 'PairCreated' events
 event_filter = w3.eth.filter({
-    'address': FACTORY_ADDRESS,
-    'topics': [PAIR_CREATED_TOPIC]
+    'address': factory_address,
+    'topics': [pair_created_topic]
 })
