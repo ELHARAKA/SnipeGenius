@@ -13,7 +13,7 @@ Unauthorized use, duplication, modification, or distribution is strictly prohibi
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-from config import trade_logger, event_filter, minimum_sleep
+from config import trade_logger, event_filter, MINIMUM_SLEEP
 from imports import logging, time
 from transactions import handle_event
 
@@ -35,7 +35,7 @@ while True:
                     handle_event(event)  # Handle each new event
                 IS_PROCESSING = False  # reset flag to False after handling event
 
-            sleep_duration = max(minimum_sleep, len(events))
+            sleep_duration = max(MINIMUM_SLEEP, len(events))
             time.sleep(sleep_duration)
 
         except Exception as e:
