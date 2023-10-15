@@ -8,7 +8,9 @@
 
 """
 © Copyright 2023
-Proprietary Software by Fahd El Haraka, 2023. Unauthorized use, duplication, modification, or distribution is strictly prohibited. Contact fahd@web3dev.ma for permissions and inquiries.
+Proprietary Software by Fahd El Haraka, 2023.
+Unauthorized use, duplication, modification, or distribution is strictly prohibited.
+Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
 from imports import *
@@ -25,8 +27,14 @@ def is_blacklisted(tokentobuy, w3):
     return owner_address.lower() in blacklist
 
 def perform_safety_check(tokentobuy, pair_address, chain_id):
-    honeypot_url = f"https://api.honeypot.is/v2/IsHoneypot?address={tokentobuy}&pair={pair_address}&chainID={chain_id}"
-    goplus_url = f"https://api.gopluslabs.io/api/v1/token_security/56?contract_addresses={tokentobuy}"
+    honeypot_url = (
+        f"https://api.honeypot.is/v2/IsHoneypot?address={tokentobuy}"
+        f"&pair={pair_address}&chainID={chain_id}"
+    )
+    goplus_url = (
+        f"https://api.gopluslabs.io/api/v1/token_security/56?"
+        f"contract_addresses={tokentobuy}"
+    )
 
     safety_checks = {
         'anti_whale_modifiable': '0',
