@@ -17,6 +17,15 @@ from imports import requests, json
 from config import BSCSCAN_API_KEY
 
 def get_token_abi(tokentobuy):
+    """
+    Fetches the ABI of a token from BscScan.
+    
+    Parameters:
+    tokentobuy (str): The contract address of the token.
+
+    Returns:
+    dict: The ABI of the token.
+    """
     url = (
         f"https://api.bscscan.com/api?"
         f"module=contract&action=getabi&address={tokentobuy}"
@@ -28,6 +37,16 @@ def get_token_abi(tokentobuy):
     return abi
 
 def get_token_balance(tokentobuy, my_address):
+    """
+    Fetches the balance of a specified token for a given address from BscScan.
+    
+    Parameters:
+    tokentobuy (str): The contract address of the token.
+    my_address (str): The address to check the balance for.
+
+    Returns:
+    int: The balance of the token.
+    """
     url = (
         f"https://api.bscscan.com/api?"
         f"module=account&action=tokenbalance&contractaddress={tokentobuy}"
@@ -40,6 +59,16 @@ def get_token_balance(tokentobuy, my_address):
     return balance
 
 def get_wbnb_balance(wbnb_address, my_address):
+    """
+    Fetches the balance of WBNB for a given address from BscScan.
+    
+    Parameters:
+    wbnb_address (str): The contract address of WBNB.
+    my_address (str): The address to check the balance for.
+
+    Returns:
+    int: The balance of WBNB.
+    """
     url = (
         f"https://api.bscscan.com/api?"
         f"module=account&action=tokenbalance&contractaddress={wbnb_address}"
