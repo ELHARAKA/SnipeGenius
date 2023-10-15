@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="https://i.ibb.co/fSc0xXb/web3dev-ma-snipegenius-py.png" alt="SnipeGenius">
+</p>
+
 # SnipeGenius
----
-SnipeGenius is a PancakeSwap trading bot on the Binance Smart Chain. It automates token buys with features like honeypot detection and gas estimation. It ensures sufficient liquidity, minimizes slippage, and performs dry-run simulations for risk mitigation.
+SnipeGenius is a sniping bot designed to monitor newly created trading pair events. Upon detection, it conducts a series of safety inspections to identify potential risks like honeypots, rug pulls, or transaction taxes. Following these checks, SnipeGenius runs buy/sell simulations to assess risks further before executing a purchase.
 
+* Note: Currently, the only supported DEX is PancakeSwap, with plans to include more in the future.
 
-### Core Components Breakdown
 ---
+## Core Components Breakdown
 - config.py: Configuration for setting up logs, wallet details, abi, and event listening.
 ###
 - api.py: Retrieves token ABI and balance data from BSC for sell simulation and balance checks.
