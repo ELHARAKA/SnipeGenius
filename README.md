@@ -65,7 +65,7 @@ sudo python3 snipe.py
 ```
 
 ## Contribution
-We warmly welcome contributions from the community. Whether you are a veteran developer or a newcomer, your input is highly valued. Here are some ways you can contribute to SnipeGenius:
+We warmly welcome contributions from the community, in adherence with the [licensing.txt](https://github.com/ELHARAKA/SnipeGenius/blob/main/LICENSE) terms. Whether you are a veteran developer or a newcomer, your input is highly valued. Here are some ways you can contribute to SnipeGenius:
 
 * Bug Reporting: If you encounter any bugs or issues, please create an issue on GitHub detailing the problem, and if possible, steps to reproduce it.
 * Feature Suggestions: Have a feature in mind? Open an issue to suggest new features or enhancements.
@@ -73,3 +73,6 @@ We warmly welcome contributions from the community. Whether you are a veteran de
 * Documentation: Help us improve the documentation to make SnipeGenius more accessible to the community. Whether it's typo corrections or whole tutorials, your contributions are crucial.
 * Testing: Assist us in improving the stability and reliability of SnipeGenius by testing it in different environments and reporting any problems.
 * Before contributing, please ensure you have read and understood the contribution guidelines and code of conduct to maintain a healthy and inclusive community environment. Thank you for your interest in improving SnipeGenius!
+
+## License
+SnipeGenius is proprietary software. The use, distribution, and modification of this software is governed by the license agreement provided in the [LICENSE.txt](https://github.com/ELHARAKA/SnipeGenius/blob/main/LICENSE) file in this repository.
