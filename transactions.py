@@ -8,10 +8,12 @@
 
 """
 © Copyright 2023
-Proprietary Software by Fahd El Haraka, 2023. Unauthorized use, duplication, modification, or distribution is strictly prohibited. Contact fahd@web3dev.ma for permissions and inquiries.
+Proprietary Software by Fahd El Haraka, 2023.
+Unauthorized use, duplication, modification, or distribution is strictly prohibited.
+Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-from config import factory_abi, pair_abi, wbnb_address, router, wbnb, private_key, my_address, w3
+from config import factory_abi, pair_abi, WBNB_ADDRESS, router, wbnb, PRIVATE_KEY, MY_ADDRESS, w3
 from api import get_wbnb_balance
 from imports import time, logging, sys
 from web3 import Web3
@@ -19,18 +21,23 @@ from datetime import datetime
 from snipegenius import check_token_safety
 
 # Execute a buy transaction
-def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, wbnb, private_key, w3, wbnb_reserve):
+def execute_buy(
+        MY_ADDRESS, amount_out_min, pair_address,
+        WBNB_ADDRESS, router, wbnb, PRIVATE_KEY,
+        w3, wbnb_reserve
+):
+    """Execute Buy function after safety checks are successfull"""
     # Check numerical arguments are of type int
     if not all(isinstance(x, int) for x in [amount_out_min, wbnb_reserve]):
         raise ValueError("All numerical arguments must be of type int.")
 
     # Remove leading and trailing spaces from addresses
-    #my_address = my_address.strip()
+    #MY_ADDRESS = MY_ADDRESS.strip()
     pair_address = pair_address.strip()
-    wbnb_address = wbnb_address.strip()
+    WBNB_ADDRESS = WBNB_ADDRESS.strip()
 
     # Check for double quotes in addresses
-    for address in [my_address, pair_address, wbnb_address]:
+    for address in [MY_ADDRESS, pair_address, WBNB_ADDRESS]:
         if '"' in address:
             raise ValueError('Addresses should not contain double quotes.')
 
@@ -45,16 +52,16 @@ def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, 
     logging.info(f"Token 1 address: {token1_address}")
 
     # Identify WBNB and the token to buy
-    if token0_address.lower() == wbnb_address.lower():
+    if token0_address.lower() == WBNB_ADDRESS.lower():
         tokentobuy = token1_address
-    elif token1_address.lower() == wbnb_address.lower():
+    elif token1_address.lower() == WBNB_ADDRESS.lower():
         tokentobuy = token0_address
     else:
         logging.error("Neither of the tokens in the pair is WBNB. Aborting.")
         return
 
     chain_id = 56  # BSC Chain ID
-    is_safe = check_token_safety(tokentobuy, pair_address, chain_id, my_address, private_key, w3, router, wbnb)
+    is_safe = check_token_safety(tokentobuy, pair_address, chain_id, MY_ADDRESS, PRIVATE_KEY, w3, router, wbnb)
     if is_safe is not None:
         if is_safe:
             logging.info("Token is considered safe. Proceeding.")
@@ -65,38 +72,38 @@ def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, 
         logging.warning("Could not determine the safety of the token. Aborting.")
         return
 
-    logging.info(f"WBNB address: {wbnb_address}")
-    logging.info(f"My address: {my_address}")
+    logging.info(f"WBNB address: {WBNB_ADDRESS}")
+    logging.info(f"My address: {MY_ADDRESS}")
     logging.info(f"Router address: {router.address}")
     logging.info("Checking allowance.")
 
     percentage_for_allowance = 0.02
-    balance = w3.eth.get_balance(my_address)
+    balance = w3.eth.get_balance(MY_ADDRESS)
     allowance_needed = int(balance * percentage_for_allowance)
-    allowance = wbnb.functions.allowance(my_address, router.address).call()
+    allowance = wbnb.functions.allowance(MY_ADDRESS, router.address).call()
 
     current_block = w3.eth.get_block('latest')['number']
     logging.info(f"Current block: {current_block}")
 
     if allowance < allowance_needed:
-        current_nonce = w3.eth.get_transaction_count(my_address)
+        current_nonce = w3.eth.get_transaction_count(MY_ADDRESS)
         logging.info(f"Current nonce: {current_nonce}")
         logging.info("Insufficient allowance. Approving more tokens before proceeding.")
 
         gas_estimate = wbnb.functions.approve(router.address, allowance_needed).estimate_gas({
-            'from': my_address,
+            'from': MY_ADDRESS,
         })
-        
+
         estimated_gas_price = w3.eth.gas_price  # Only work for Web3.py v5.0.0-beta.0 onwards
         approve_txn = wbnb.functions.approve(router.address, allowance_needed).build_transaction({
-            'from': my_address,
+            'from': MY_ADDRESS,
             'gas': gas_estimate,
             'gasPrice': estimated_gas_price,
-            'nonce': w3.eth.get_transaction_count(my_address),
+            'nonce': w3.eth.get_transaction_count(MY_ADDRESS),
             'chainId': 56
         })
 
-        signed_approve_txn = w3.eth.account.sign_transaction(approve_txn, private_key)
+        signed_approve_txn = w3.eth.account.sign_transaction(approve_txn, PRIVATE_KEY)
 
          # Inspect the transaction object
         logging.info("Approval transaction details:")
@@ -116,21 +123,23 @@ def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, 
         gas_estimate_swap = router.functions.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             allowance_needed,
             amount_out_min,
-            [wbnb_address, tokentobuy],
-            my_address,
+            [WBNB_ADDRESS, tokentobuy],
+            MY_ADDRESS,
             int(time.time()) + 120
-        ).estimate_gas({'from': my_address})
+        ).estimate_gas({'from': MY_ADDRESS})
 
-        logging.info(f"Estimated gas cost for the swap transaction: {gas_estimate_swap}")
+        logging.info(
+        f"Estimated gas cost for the swap transaction: {gas_estimate_swap}"
+    )
 
         # Perform a dry run of the swap transaction to get results
         dry_run_result = router.functions.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             allowance_needed,
             amount_out_min,
-            [wbnb_address, tokentobuy],
-            my_address,
+            [WBNB_ADDRESS, tokentobuy],
+            MY_ADDRESS,
             int(time.time()) + 120
-        ).call({'from': my_address})
+        ).call({'from': MY_ADDRESS})
 
         logging.info(f"Dry run result: {dry_run_result}")
 
@@ -138,19 +147,19 @@ def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, 
         gas_estimate = router.functions.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             allowance_needed,
             amount_out_min,
-            [wbnb_address, tokentobuy],
-            my_address,
+            [WBNB_ADDRESS, tokentobuy],
+            MY_ADDRESS,
             int(time.time()) + 120
-        ).estimate_gas({'from': my_address})
+        ).estimate_gas({'from': MY_ADDRESS})
 
         # Build the transaction with the estimated gas
         estimated_gas_price = w3.eth.gas_price  # Only work for Web3.py v5.0.0-beta.0 onwards
         logging.info(f"Estimated gas price: {estimated_gas_price}")
         txn = {
-            'from': my_address,
+            'from': MY_ADDRESS,
             'gas': gas_estimate,
             'gasPrice': estimated_gas_price,
-            'nonce': w3.eth.get_transaction_count(my_address),
+            'nonce': w3.eth.get_transaction_count(MY_ADDRESS),
             'chainId': 56
         }
 
@@ -158,13 +167,13 @@ def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, 
         swap_txn = router.functions.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             allowance_needed,
             amount_out_min,
-            [wbnb_address, tokentobuy],
-            my_address,
+            [WBNB_ADDRESS, tokentobuy],
+            MY_ADDRESS,
             int(time.time()) + 120
         ).build_transaction(txn)
 
         # Sign the transaction
-        signed_swap_txn = w3.eth.account.sign_transaction(swap_txn, private_key)
+        signed_swap_txn = w3.eth.account.sign_transaction(swap_txn, PRIVATE_KEY)
 
         # Send the raw transaction
         txn_hash = w3.eth.send_raw_transaction(signed_swap_txn.rawTransaction)
@@ -194,10 +203,14 @@ def execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, 
         logging.error(f"An error occurred: {str(e)}")
 
 # Extract the ABI for the PairCreated event from the factory ABI
-pair_created_event_abi = [event_abi for event_abi in factory_abi if event_abi['type'] == 'event' and event_abi['name'] == 'PairCreated'][0]
+filtered_event_abi_list = [
+    event_abi for event_abi in factory_abi
+    if event_abi['type'] == 'event' and event_abi['name'] == 'PairCreated'
+]
+pair_created_event_abi = filtered_event_abi_list[0]
 
-# Check for SUFFICIENT LIQUIDITY and return reserves
-def check_liquidity(pair_address, wbnb_address, w3):
+def check_liquidity(pair_address, WBNB_ADDRESS, w3):
+    """Check for SUFFICIENT LIQUIDITY and return reserves"""
     pair_contract = w3.eth.contract(address=pair_address, abi=pair_abi)
     reserves = pair_contract.functions.getReserves().call()
     reserve0, reserve1 = reserves[0], reserves[1]
@@ -207,10 +220,10 @@ def check_liquidity(pair_address, wbnb_address, w3):
 
     wbnb_reserve = None
 
-    if token0_address.lower() == wbnb_address.lower():
+    if token0_address.lower() == WBNB_ADDRESS.lower():
         if reserve0 >= minimum_liquidity:
             wbnb_reserve = reserve0
-    elif token1_address.lower() == wbnb_address.lower():
+    elif token1_address.lower() == WBNB_ADDRESS.lower():
         if reserve1 >= minimum_liquidity:
             wbnb_reserve = reserve1
 
@@ -219,10 +232,9 @@ def check_liquidity(pair_address, wbnb_address, w3):
     else:
         return False, wbnb_reserve
 
-# Handle events and execute buys
 def handle_event(event):
+    """Handle events and execute buys"""
 
-    # Remove leading and trailing spaces from pair_address
     decoded_data = w3.eth.contract(abi=[pair_created_event_abi]).events.PairCreated().process_log(event)
     pair_address = decoded_data['args']['pair']
     pair_address = Web3.to_checksum_address(pair_address.strip())
@@ -237,7 +249,7 @@ def handle_event(event):
     max_retries = 3
 
     while retries < max_retries:
-        liquidity_status, wbnb_reserve = check_liquidity(pair_address, wbnb_address, w3)
+        liquidity_status, wbnb_reserve = check_liquidity(pair_address, WBNB_ADDRESS, w3)
 
         if wbnb_reserve is None:
             current_time = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
@@ -251,7 +263,7 @@ def handle_event(event):
 
         wbnb_reserve = int(wbnb_reserve)
         percentage_for_amount_in = 0.01  # Adjust this percentage as needed
-        balance = get_wbnb_balance(wbnb_address, my_address)
+        balance = get_wbnb_balance(WBNB_ADDRESS, MY_ADDRESS)
         logging.info(f"Your Wallet Balance: {balance } WBNB")
 
         if liquidity_status:
@@ -260,7 +272,7 @@ def handle_event(event):
             amount_out_min = int(amount_in * (1 - acceptable_slippage))
 
             logging.info(f"Sufficient (WBNB) liquidity found, performing some safety checks then executing buy.")
-            execute_buy(my_address, amount_out_min, pair_address, wbnb_address, router, wbnb, private_key, w3, wbnb_reserve)
+            execute_buy(MY_ADDRESS, amount_out_min, pair_address, WBNB_ADDRESS, router, wbnb, PRIVATE_KEY, w3, wbnb_reserve)
             return
         else:
             logging.info(f"Insufficient (WBNB) liquidity, retrying in 30 seconds.")
