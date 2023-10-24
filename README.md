@@ -55,6 +55,13 @@ BSCSCAN_API_KEY = "Your_API_Key"
 my_address = '0xYour_Wallet_Address'
 private_key = '0xYour_Private_Key'
 ```
+2. Amount to buy
+Currently to configure how much you willing to spend (buy) on Token it's only done through modifying the transactions.py file, you can set your percentage like this:
+
+```python
+# Example if you want to use 10% of your total balance for purchasing a Token then you do:
+percentage_for_amount_in = 0.10
+```
 
 ### Run SnipeGenius:
 ```bash
