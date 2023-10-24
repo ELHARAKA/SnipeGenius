@@ -2,6 +2,9 @@
   <img src="https://i.ibb.co/fSc0xXb/web3dev-ma-snipegenius-py.png" alt="SnipeGenius">
 </p>
 
+# ------ ATTENTION ------
+The upcoming SnipeGenius (V2.0.1) will be partially open-source as certain safety check algorithms will be concealed to prevent misuse by malicious actors. This version will also extend its accessibility with applications for Windows and MacOS. Meanwhile, the current version, SnipeGenius (V1.0.1), remains fully open-source to provide users a grasp on how the code operates 🙂
+
 # SnipeGenius (V1.0.1)
 SnipeGenius is a sniping bot designed to monitor newly created trading pair events. Upon detection, it conducts a series of safety inspections to identify potential risks like honeypots, rug pulls, or transaction taxes. Following these checks, SnipeGenius runs buy/sell simulations to assess risks further before executing a purchase.
 
