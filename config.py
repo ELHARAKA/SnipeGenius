@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.0.2
+# Version: 1.5.0_Stable
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -28,7 +28,7 @@ def display_splash():
     print(colored(ascii_art, 'white'))
 
     print("--------------------------------------------------------")
-    print(colored("SnipeGenius 🥞 Version: 1.0.2", 'yellow'))
+    print(colored("SnipeGenius 🥞 Version: 1.5.0_Stable", 'yellow'))
     print("--------------------------------------------------------\n")
     print("Developed by " + colored("Fahd El Haraka ©", 'red'))
     print("Telegram: " + colored("@thisiswhosthis", 'red'))
