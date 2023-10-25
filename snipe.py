@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # SnipeGenius 🥞 (PancakeSwap)
 # Version: 1.5.0_Stable
 # Developed by Fahd El Haraka ©
