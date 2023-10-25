@@ -30,7 +30,6 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 
 ## Setup & Usage
 * Make sure Python 3.x installed on your machine.
- Installation
 1. Clone the SnipeGenius repository:
 ```
 git clone https://github.com/ELHARAKA/SnipeGenius.git
@@ -42,6 +41,10 @@ cd SnipeGenius
 3. Install the necessary Python libraries:
 ```
 pip3 install requirements.txt
+```
+* Note: If you encounter any errors related to the pwinput package, execute the following command to resolve the issue:
+```python
+  sudo python3 -m pip install pwinput
 ```
 
 ### Usage:
