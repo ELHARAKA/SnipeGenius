@@ -21,12 +21,6 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 - transactions: Manages and executes buy transactions on new token pairs.
 ###
 - snipe.py: Initiates SnipeGenius.
-###
-- (wbnb,router,factory,pair): These ABIs enable SnipeGenius to interact with PancakeSwap's Factory, Router, WBNB, and Pair contracts.
-###
-- blacklist.txt: Tokens owned by blacklisted addresses are skipped during transactions.
-###
-- trade_history.log: is SnipeGenius' trade log, recording trade-related data, events and errors for debugging.
 
 ## Setup & Usage
 * Make sure Python 3.x installed on your machine.
