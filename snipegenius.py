@@ -43,26 +43,10 @@ def perform_safety_check(tokentobuy, pair_address, chain_id):
     honeypot_url = f"https://api.honeypot.is/v2/IsHoneypot?address={tokentobuy}&pair={pair_address}&chainID={chain_id}"
 
     safety_checks = {
-        'anti_whale_modifiable': '0',
-        'buy_tax': '0',
-        'can_take_back_ownership': '0',
-        'cannot_buy': '0',
-        'cannot_sell_all': '0',
-        'creator_percent': lambda x: float(x) < 5.0,
-        'hidden_owner': '0',
-        'honeypot_with_same_creator': '0',
-        'is_anti_whale': '0',
-        'is_blacklisted': '0',
-        'is_honeypot': '0',
-        'is_open_source': '1',
-        'is_proxy': '0',
-        'is_whitelisted': '0',
-        'personal_slippage_modifiable': '0',
-        'selfdestruct': '0',
-        'sell_tax': '0',
-        'slippage_modifiable': '0',
-        'trading_cooldown': '0',
-        'transfer_pausable': '0',
+        'isHoneypot': False,
+        'buyTax': lambda x: x == 0,
+        'sellTax': lambda x: x == 0,
+        'transferTax': lambda x: x == 0,
     }
 
     total_checks = len(safety_checks)
@@ -73,7 +57,9 @@ def perform_safety_check(tokentobuy, pair_address, chain_id):
         honeypot_response.raise_for_status()
         honeypot_data = json.loads(honeypot_response.text)
 
-        token_data = honeypot_data.get('honeypotResult', {}).get(tokentobuy.lower(), {})
+        token_data = honeypot_data.get('honeypotResult', {})
+        simulation_result = honeypot_data.get('simulationResult', {})
+        token_data.update(simulation_result)
 
         for key, expected_value in safety_checks.items():
             actual_value = token_data.get(key, 'N/A')
@@ -97,7 +83,6 @@ def perform_safety_check(tokentobuy, pair_address, chain_id):
         file_logger.error(f"JSON decoding error: {e}")
 
     return passed_checks == total_checks
-
 
 def google_search(tokentobuy):
     from config import google_api_key, google_cse_id
