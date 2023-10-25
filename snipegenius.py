@@ -107,7 +107,7 @@ def google_search(tokentobuy):
 
 def check_google_results(tokentobuy):
     num_results = google_search(tokentobuy)
-    return num_results >= 1
+    return num_results >= 3
 
 # Simulate Transactions to inspect any issues during buy/sell
 def simulate_transactions(tokentobuy, router, wbnb, w3):
