@@ -22,9 +22,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
 from cryptography.fernet import InvalidToken
 
-def generate_key(password: str):
+def generate_key(password: str, salt=None):
+    if salt is None:
+        salt = os.urandom(16)
     password_bytes = password.encode()
-    salt = b'\x00' * 16
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -33,7 +34,7 @@ def generate_key(password: str):
         backend=default_backend()
     )
     key = base64.urlsafe_b64encode(kdf.derive(password_bytes))
-    return key
+    return key, salt
 
 def get_credentials():
     from config import logger, file_logger
@@ -45,8 +46,11 @@ def get_credentials():
             cipher_suite = Fernet(key)
             with open("wallet.txt", "rb") as file:
                 encrypted_data = file.read()
+            salt = encrypted_data[:16]
+            key, _ = generate_key(password, salt)
+            cipher_suite = Fernet(key)
             try:
-                decrypted_data = cipher_suite.decrypt(encrypted_data)
+                decrypted_data = cipher_suite.decrypt(encrypted_data[16:])
                 credentials = decrypted_data.decode().split('\n')
                 if len(credentials) >= 2:
                     address, private_key = credentials
@@ -70,11 +74,11 @@ def get_credentials():
         address = input("Enter your wallet address: ")
         private_key = input("Enter your private key: ")
         password = input("Enter a password to encrypt your wallet, please choose a strong password: ")
-        key = generate_key(password)
+        key, salt = generate_key(password)
         cipher_suite = Fernet(key)
         with open("wallet.txt", "wb") as file:
             encrypted_data = cipher_suite.encrypt(f'{address}\n{private_key}'.encode())
-            file.write(encrypted_data)
+            file.write(salt + encrypted_data)
         logger.info("Wallet setup successful. Your wallet details have been encrypted and saved.")
         return address, private_key
 
