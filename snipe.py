@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.5.1_Beta
+# Version: 1.5.1_Stable
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis

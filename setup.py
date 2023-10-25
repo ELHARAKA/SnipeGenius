@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='SnipeGenius',
-    version='1.5.0',
+    version='1.5.1',
     description='A sniping bot for detecting and trading new token pairs safely',
     url='https://github.com/ELHARAKA/SnipeGenius',
     author='Fahd El Haraka',
