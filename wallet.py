@@ -42,7 +42,7 @@ def get_credentials():
         incorrect_attempts = 0
         while True:
             password = pwinput.pwinput(prompt="Enter password to decrypt wallet: ")
-            key = generate_key(password)
+            key, _ = generate_key(password)
             cipher_suite = Fernet(key)
             with open("wallet.txt", "rb") as file:
                 encrypted_data = file.read()
