@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.ibb.co/fSc0xXb/web3dev-ma-snipegenius-py.png" alt="SnipeGenius">
+  <img src="https://i.ibb.co/NxVWh3q/snipegenius.webp" alt="SnipeGenius">
 </p>
 
 # SnipeGenius
