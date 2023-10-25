@@ -2,10 +2,7 @@
   <img src="https://i.ibb.co/fSc0xXb/web3dev-ma-snipegenius-py.png" alt="SnipeGenius">
 </p>
 
-# ------ ATTENTION ------
-The upcoming SnipeGenius (V2.0.1) will be partially open-source as certain safety check algorithms will be concealed to prevent misuse by malicious actors. This version will also extend its accessibility with applications for Windows and MacOS. Meanwhile, the current version, SnipeGenius (V1.0.1), remains fully open-source to provide users a grasp on how the code operates 🙂
-
-# SnipeGenius (V1.0.1)
+# SnipeGenius (V1.0.2)
 SnipeGenius is a sniping bot designed to monitor newly created trading pair events. Upon detection, it conducts a series of safety inspections to identify potential risks like honeypots, rug pulls, or transaction taxes. Following these checks, SnipeGenius runs buy/sell simulations to assess risks further before executing a purchase.
 
 * Note: Currently, the only supported DEX is PancakeSwap, with plans to include more in the future. Safety checks within the system are continually being enhanced to ensure secure transactions. As i expand to support additional DEX platforms, my focus on robust safety measures remains a top priority to provide a reliable and secure trading experience for our users.
@@ -13,31 +10,26 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 
 ---
 ## Core Components Breakdown
-- config.py: Configuration for setting up logs, wallet details, abi, and event listening.
+- config.py: Sets up logging, displays startup banner, and initializes connections to Binance Smart Chain.
 ###
-- api.py: Retrieves token ABI and balance data from BSC for sell simulation and balance checks.
+- coinOps.py: Retrieves specified token and WBNB balances for a given address.
 ### 
-- imports.py: Imports essential libraries for web3 connectivity and logging. (Will be removed later)
+- wallet.py: Handles encryption, storage, and retrieval of wallet and Google credentials.
 ### 
-- snipegenius.py: Performs different safety checks for tokens such as honeypot... before buying it. (Safety check accuracy so far is approx 50% so more work needed here in the future)
+- snipegenius.py: Conducts safety checks on tokens by verifying ownership, checking against a blacklist, analyzing token parameters, performing simulated transactions, and searching for associated risks online.
 ###
-- transactions: Handles new token pairs on PancakeSwap, executes buy transactions.
+- transactions: Manages and executes buy transactions on new token pairs.
 ###
-- snipe.py: Initiates SnipeGenius (Main file: python snipe.py)
+- snipe.py: Initiates SnipeGenius.
 ###
 - (wbnb,router,factory,pair): These ABIs enable SnipeGenius to interact with PancakeSwap's Factory, Router, WBNB, and Pair contracts.
 ###
 - blacklist.txt: Tokens owned by blacklisted addresses are skipped during transactions.
 ###
-- trade_history.log: is SnipeGenius' trade log, recording trade-related data and events
+- trade_history.log: is SnipeGenius' trade log, recording trade-related data, events and errors for debugging.
 
 ## Setup & Usage
-
-### Prerequisites
-- Python 3.x installed on your machine.
-- [web3.py](https://web3py.readthedocs.io/) and [Requests](https://docs.python-requests.org/) libraries installed.
-
-### Installation
+* Make sure Python 3.x installed on your machine.
 1. Clone the SnipeGenius repository:
 ```
 git clone https://github.com/ELHARAKA/SnipeGenius.git
@@ -48,32 +40,27 @@ cd SnipeGenius
 ```
 3. Install the necessary Python libraries:
 ```
-pip3 install web3 requests
+pip3 install requirements.txt
 ```
-### Configuration
-1. Update `config.py` with your wallet details and ApiKey. Get your apikey [BscScan](https://bscscan.com/myapikey).
-
+* Note: If you encounter any errors related to the pwinput package, execute the following command to resolve the issue:
 ```python
-BSCSCAN_API_KEY = "Your_API_Key"
-my_address = '0xYour_Wallet_Address'
-private_key = '0xYour_Private_Key'
-```
-2. Amount to buy
-Currently to configure how much you willing to spend (buy) on Token it's only done through modifying the transactions.py file, you can set your percentage like this:
-
-```python
-# Example if you want to use 10% of your total balance for purchasing a Token then you do:
-percentage_for_amount_in = 0.10
+  sudo python3 -m pip install pwinput
 ```
 
-### Run SnipeGenius:
-```bash
-python3 snipe.py
+### Usage:
+1. The --p parameter is essential to designate the percentage of amount for trade; for instance, 1 denotes 1%.
+2. The --v parameter is optional. Use 2 to show all logs. Verbosity level 2 is recommended only for debugging purposes.
+   * To debug logs later without passing --v 2, check the log file "trade_history.log".
+   ```bash
+   sudo python3 snipe.py --p 1
+   ```
 
-OR:
-
-sudo python3 snipe.py
-```
+### Run and Setup
+* Upon code execution, you'll be prompted to enter wallet details and Google API key.
+1. Run `sudo python3 snipe.py`
+2. Input wallet address, private key, and encryption password. Details saved encrypted in wallet.txt locally.
+3. Input Google API key and CSE ID.
+   * Note: To obtain your Google API Key and CSE ID, follow these instructions [Google API Key](https://developers.google.com/webmaster-tools/search-console-api/v1/configure)
 
 ## Contribution
 We warmly welcome contributions from the community, in adherence with the [licensing](https://github.com/ELHARAKA/SnipeGenius/blob/main/LICENSE) terms. Whether you are a veteran developer or a newcomer, your input is highly valued. Here are some ways you can contribute to SnipeGenius:
