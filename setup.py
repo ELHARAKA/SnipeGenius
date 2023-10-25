@@ -19,7 +19,7 @@ setup(
         'google-api-python-client==2.104.0',
         'pwinput'
     ],
-    python_requires='>=3.0',
+    python_requires='>=3.6',
     entry_points={
         'console_scripts': [
             'snipegenius = snipe:main',
