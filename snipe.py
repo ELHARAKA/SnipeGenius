@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.5.1_Stable
+# Version: 1.5.0_Stable
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
