@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.0.1
+# Version: 1.0.2
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -13,27 +13,107 @@ Unauthorized use, duplication, modification, or distribution is strictly prohibi
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-from imports import *
+import logging
+import pyfiglet
+import colorlog
+from termcolor import colored
+import json
+from sys import exit
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
+from wallet import get_credentials, get_google_details
 
-# Configure logging for trade history to a file.
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-trade_logger = logging.getLogger('trade_logger')
-trade_handler = logging.FileHandler('trade_history.log')
-trade_handler.setLevel(logging.INFO)
-trade_logger.addHandler(trade_handler)
+def display_splash():
+    ascii_art = pyfiglet.figlet_format("SnipeGenius")
+    print(colored(ascii_art, 'white'))
+
+    print("--------------------------------------------------------")
+    print(colored("SnipeGenius 🥞 Version: 1.0.2", 'yellow'))
+    print("--------------------------------------------------------\n")
+    print("Developed by " + colored("Fahd El Haraka ©", 'red'))
+    print("Telegram: " + colored("@thisiswhosthis", 'red'))
+    print("Website: " + colored("https://web3dev.ma", 'red'))
+    print("GitHub: " + colored("https://github.com/ELHARAKA", 'red'))
+    print("--------------------------------------------------------\n")
+
+display_splash()
+
+# Common logging format and date format
+log_format = '[%(asctime)s] %(message)s'
+date_format = '%Y-%m-%d %H:%M:%S'
+
+# Shared stream handler for logging to terminal with color
+stream_handler = colorlog.StreamHandler()
+stream_handler.setFormatter(colorlog.ColoredFormatter(
+    '%(log_color)s' + log_format,
+    datefmt=date_format,
+    log_colors={
+        'DEBUG': 'cyan',
+        'INFO': 'green',
+        'WARNING': 'yellow',
+        'ERROR': 'red',
+        'CRITICAL': 'red,bg_white'
+    }
+))
+stream_handler.setLevel(logging.INFO)  # default level
+
+# Set up logger for logging to both file and terminal
+logger = logging.getLogger('logger')
+logger.setLevel(logging.INFO)  # default level
+
+# File handler for logging to file
+file_handler = logging.FileHandler('trade_history.log')
+file_handler.setLevel(logging.INFO)  # default level
+file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)  # add shared stream handler
+
+# Set up file_logger for logging to file only (by default)
+file_logger = logging.getLogger('file_logger')
+file_logger.setLevel(logging.INFO)  # default level
+file_file_handler = logging.FileHandler('trade_history.log')
+file_file_handler.setLevel(logging.INFO)  # default level
+file_file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+file_logger.addHandler(file_file_handler)
+
+def initialize_logging(verbosity):
+    log_level = logging.INFO  # default level
+
+    if verbosity == 2:
+        log_level = logging.DEBUG  # enabling debug logs for both logger and file_logger
+        file_logger.addHandler(stream_handler)  # add shared stream handler to file_logger
+
+    logger.setLevel(log_level)
+    file_logger.setLevel(log_level)
+    stream_handler.setLevel(log_level)  # adjust level of shared stream handler
 
 # Initialize and connect to the Binance Smart Chain node using Web3.
-w3 = Web3(Web3.HTTPProvider('https://bsc-dataseed2.binance.org'))
+w3 = Web3(Web3.HTTPProvider('https://bsc-dataseed2.binance.org')) # Better use a private node.
 if w3.is_connected():
-    logging.info("Connected to node.")
+    logger.info("Connected to node.")
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 else:
-    logging.error("Node connection failed.")
+    logger.error("Node connection failed.")
     exit(1)
 
-BSCSCAN_API_KEY = "YOUR_API_KEY"
-my_address = '0xYour_Wallet_Address'
-private_key = '0xYour_Private_Key'
+my_address = ""
+private_key = ""
+google_api_key = ""
+google_cse_id = ""
+
+def update_credentials(address, key, g_api_key, g_cse_id):
+    global my_address, private_key, google_api_key, google_cse_id
+    my_address = address
+    private_key = key
+    google_api_key = g_api_key
+    google_cse_id = g_cse_id
+
+def initialize_credentials():
+    global my_address, private_key, google_api_key, google_cse_id
+    my_address, private_key = get_credentials()
+    google_api_key, google_cse_id = get_google_details()
+    update_credentials(my_address, private_key, google_api_key, google_cse_id)
+
 wbnb_address = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
 router_address = '0x10ED43C718714eb63d5aA57B78B54704E256024E'
 factory_address = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'

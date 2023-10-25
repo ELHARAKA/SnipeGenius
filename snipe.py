@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.0.1
+# Version: 1.0.2
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -13,33 +13,61 @@ Unauthorized use, duplication, modification, or distribution is strictly prohibi
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-from config import trade_logger, event_filter, minimum_sleep
-from imports import logging, time
+import time
+import config
+import argparse
+from config import logger, file_logger, event_filter, minimum_sleep
 from transactions import handle_event
+from queue import Queue
 
-def main():
-    # Set up logging
-    trade_logger.info("Sniping Started, Fetching for new events...")
-    is_processing = False
+event_queue = Queue()
 
-    # Main loop (Events Check & Execute Trades)
+def recreate_event_filter():
+    return config.w3.eth.filter({
+        'address': config.factory_address,
+        'topics': [config.pair_created_topic]
+    })
+
+def main(percentage_for_amount_in, verbosity):
+    config.initialize_logging(verbosity)
+    percentage_for_amount_in /= 100  # Convert percentage to decimal
+    config.initialize_credentials()
+    logger.info("Sniping Started...")
+
+    global event_filter
+    event_filter = config.event_filter
+
     while True:
-        if not is_processing:
-            try:
-                events = event_filter.get_new_entries()
+        try:
+            events = event_filter.get_new_entries()
 
-                if events:
-                    is_processing = True  # set flag to True when event is found
-                    logging.info(f"Found {len(events)} new event(s).")
-                    for event in events:
-                        handle_event(event)  # Handle each new event
-                    is_processing = False  # reset flag to False after handling event
+            if events:
+                for event in events:
+                    event_queue.put(event)
+                file_logger.info(f"Queue size: {event_queue.qsize()}")
 
-                sleep_duration = max(minimum_sleep, len(events))
-                time.sleep(sleep_duration)
+            while not event_queue.empty():
+                file_logger.debug("Processing an event...")
+                handle_event(event_queue.get(), percentage_for_amount_in)  # Passed the parameter to handle_event
+                file_logger.debug("Event processed.")
 
-            except Exception as e:
-                logging.error(f"An error occurred: {str(e)}")
+            sleep_duration = max(minimum_sleep, event_queue.qsize())
+            time.sleep(sleep_duration)
+
+        except Exception as e:
+            logger.error(f"An error occurred, Check Log File")
+            file_logger.error(f"An error occurred: {str(e)}")
+            if 'filter not found' in str(e):
+                file_logger.info("Recreating event filter...")
+                event_filter = recreate_event_filter()
+
+        except KeyboardInterrupt:
+            logger.info(f"SnipeEnding @ {time.strftime('%H:%M:%S /%Y-%m-%d/', time.localtime())}")
+            exit(0)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--p', type=float, required=True, help='Percentage for amount_in (e.g., 1 for 1%)')
+    parser.add_argument('--v', type=int, choices=[1, 2], default=1, help='Verbosity level. 1 for default, and 2 for showing all logs.')
+    args = parser.parse_args()
+    main(args.p, args.v)

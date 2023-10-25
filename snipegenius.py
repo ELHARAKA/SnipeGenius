@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.0.1
+# Version: 1.0.2
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -13,12 +13,25 @@ Unauthorized use, duplication, modification, or distribution is strictly prohibi
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-from imports import *
-from api import get_token_abi, get_token_balance
+import json
+import time
+import requests
+from googleapiclient.discovery import build
+from coinOps import get_token_balance
+from config import logger, file_logger
 
 def is_blacklisted(tokentobuy, w3):
-    token_abi = get_token_abi(tokentobuy)
-    token_contract = w3.eth.contract(address=tokentobuy, abi=token_abi)
+    # ABI for ERC-20 owner function
+    abi = [{
+        "constant": True,
+        "inputs": [],
+        "name": "owner",
+        "outputs": [{"name": "", "type": "address"}],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    }]
+    token_contract = w3.eth.contract(address=tokentobuy, abi=abi)
     owner_address = token_contract.functions.owner().call()
 
     with open('blacklist.txt', 'r') as file:
@@ -28,7 +41,6 @@ def is_blacklisted(tokentobuy, w3):
 
 def perform_safety_check(tokentobuy, pair_address, chain_id):
     honeypot_url = f"https://api.honeypot.is/v2/IsHoneypot?address={tokentobuy}&pair={pair_address}&chainID={chain_id}"
-    goplus_url = f"https://api.gopluslabs.io/api/v1/token_security/56?contract_addresses={tokentobuy}"
 
     safety_checks = {
         'anti_whale_modifiable': '0',
@@ -37,13 +49,11 @@ def perform_safety_check(tokentobuy, pair_address, chain_id):
         'cannot_buy': '0',
         'cannot_sell_all': '0',
         'creator_percent': lambda x: float(x) < 5.0,
-        'external_call': '0',
         'hidden_owner': '0',
         'honeypot_with_same_creator': '0',
         'is_anti_whale': '0',
         'is_blacklisted': '0',
         'is_honeypot': '0',
-        'is_mintable': '0',
         'is_open_source': '1',
         'is_proxy': '0',
         'is_whitelisted': '0',
@@ -63,39 +73,45 @@ def perform_safety_check(tokentobuy, pair_address, chain_id):
         honeypot_response.raise_for_status()
         honeypot_data = json.loads(honeypot_response.text)
 
-        safety_checks['is_honeypot'] = honeypot_data.get('honeypotResult', {}).get(tokentobuy.lower(), {}).get('isHoneypot', '0')
-
-        goplus_response = requests.get(goplus_url)
-        goplus_response.raise_for_status()
-        goplus_data = json.loads(goplus_response.text)
-
-        token_data = goplus_data.get('result', {}).get(tokentobuy.lower(), {})
+        token_data = honeypot_data.get('honeypotResult', {}).get(tokentobuy.lower(), {})
 
         for key, expected_value in safety_checks.items():
             actual_value = token_data.get(key, 'N/A')
-            if callable(expected_value):  # handle special case for creator_percent
+            if callable(expected_value):
                 try:
-                    float_actual_value = float(actual_value)  # Attempt to convert actual_value to float
+                    float_actual_value = float(actual_value)
                 except ValueError:
-                    logging.warning(f"Check failed for {key}: {actual_value}")
-                    continue  # Skip to the next iteration if conversion fails
-                if expected_value(float_actual_value):  # Pass the float value to expected_value
+                    file_logger.debug(f"Check failed for {key}: {actual_value}")
+                    continue
+                if expected_value(float_actual_value):
                     passed_checks += 1
             elif actual_value == expected_value:
                 passed_checks += 1
             else:
-                logging.warning(f"Check failed for {key}: {actual_value}")
+                file_logger.debug(f"Check failed for {key}: {actual_value}")
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"Request error: {e}")
+        file_logger.error(f"Request error: {e}")
 
     except json.JSONDecodeError as e:
-        logging.error(f"JSON decoding error: {e}")
+        file_logger.error(f"JSON decoding error: {e}")
 
-    return passed_checks == total_checks  # Return True if safety rate is 90% or higher, False otherwise
+    return passed_checks == total_checks
+
+
+def google_search(tokentobuy):
+    from config import google_api_key, google_cse_id
+    service = build("customsearch", "v1", developerKey=google_api_key)
+    results = service.cse().list(q=f'"{tokentobuy}"', cx=google_cse_id).execute()
+    return int(results['searchInformation']['totalResults'])
+
+def check_google_results(tokentobuy):
+    num_results = google_search(tokentobuy)
+    return num_results >= 1
 
 # Simulate Transactions to inspect any issues during buy/sell
-def simulate_transactions(my_address, tokentobuy, router, wbnb, private_key, w3):
+def simulate_transactions(tokentobuy, router, wbnb, w3):
+    from config import private_key, my_address
     amount_to_buy = w3.to_wei('0.00001', 'ether')  # 0.00001 WBNB in Wei
 
     # Simulate Buy
@@ -118,23 +134,30 @@ def simulate_transactions(my_address, tokentobuy, router, wbnb, private_key, w3)
     buy_txn_receipt = w3.eth.wait_for_transaction_receipt(buy_txn_hash)
 
     if buy_txn_receipt.status != 1:
-        logging.error('Buy simulation failed.')
-        return False  # Simulation failed at buy step
+        file_logger.error(f"Buy simulation failed. TX HASH {buy_txn_hash.hex()}")
+        return False
     else:
-        logging.info(f"Buy Simulation Passed: TX HASH {buy_txn_hash.hex()}")
+        file_logger.info(f"Buy Simulation Passed: TX HASH {buy_txn_hash.hex()}")
 
     time.sleep(15)  # Wait for TX to get confirmed
 
-    token_balance = get_token_balance(tokentobuy, my_address) # Get Token Balance
+    token_balance = get_token_balance(tokentobuy) # Get Token Balance
     if token_balance == 0:
-        logging.error('Balance is Zero')
+        logger.error('Balance is Zero')
         return False
     else:
-        logging.info(f'Token balance = {token_balance}')
+        file_logger.info(f'Token balance = {token_balance}')
 
     # Simulate Approve
-    token_abi = get_token_abi(tokentobuy)
-    token_contract = w3.eth.contract(address=tokentobuy, abi=token_abi)
+    token_contract = w3.eth.contract(address=tokentobuy, abi=[{
+        "constant": True,
+        "inputs": [{"name": "_owner", "type": "address"}],
+        "name": "balanceOf",
+        "outputs": [{"name": "balance", "type": "uint256"}],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
+    }])
     approve_txn = token_contract.functions.approve(router.address, token_balance).build_transaction({
         'from': my_address,
         'gas': 100000,
@@ -147,16 +170,15 @@ def simulate_transactions(my_address, tokentobuy, router, wbnb, private_key, w3)
     w3.eth.wait_for_transaction_receipt(approve_txn_hash)
     approve_txn_receipt = w3.eth.wait_for_transaction_receipt(approve_txn_hash)
     if approve_txn_receipt.status == 1:
-        logging.info('Approval Simulation successful.')
+        file_logger.info('Approval Simulation successful.')
     else:
-        logging.error('Approval Simulation failed.')
+        file_logger.error('Approval Simulation failed.')
 
-    time.sleep(15) # Wait for TX to get confirmed
+    time.sleep(15)
 
-    # Simulate Sell
     sell_txn = router.functions.swapExactTokensForETHSupportingFeeOnTransferTokens(
         token_balance,
-        0,  # set to 0 to accept any amount of ETH
+        0,  # set to 0 to accept any amount of WBNB
         [tokentobuy, wbnb.address],
         my_address,
         int(time.time()) + 120
@@ -172,20 +194,27 @@ def simulate_transactions(my_address, tokentobuy, router, wbnb, private_key, w3)
     sell_txn_hash = w3.eth.send_raw_transaction(signed_sell_txn.rawTransaction)
     sell_txn_receipt = w3.eth.wait_for_transaction_receipt(sell_txn_hash)
 
-    time.sleep(15) # Wait for Simulate Sell TX to get confirmed
+    time.sleep(15)
 
     if sell_txn_receipt.status != 1:
-        logging.error('Sell Simulation Failed, Run the fuck away.')
+        file_logger.error(f"Sell Simulation Failed, TX hash: {sell_txn_hash.hex()} and Run the fuck away.")
         return False
     else:
-        logging.info(f"Sell Simulation Passed: TX HASH {sell_txn_hash.hex()}")
+        file_logger.info(f"Sell Simulation Passed: TX HASH {sell_txn_hash.hex()}")
 
-def check_token_safety(tokentobuy, pair_address, chain_id, my_address, private_key, w3, router, wbnb):
-    time.sleep(30)  # Wait for 30 seconds before the first check
-    first_check = perform_safety_check(tokentobuy, pair_address, chain_id)
+def check_token_safety(tokentobuy, pair_address, chain_id, w3, router, wbnb):
+    try:
+        time.sleep(15)
+        is_safety_valid = perform_safety_check(tokentobuy, pair_address, chain_id)
 
-    if first_check:
-        simulation_result = simulate_transactions(my_address, tokentobuy, router, wbnb, private_key, w3)
-        return simulation_result
+        if is_safety_valid:
+            google_safe = check_google_results(tokentobuy)
 
-    return False
+            if google_safe:
+                simulation_result = simulate_transactions(tokentobuy, router, wbnb, w3)
+                return bool(simulation_result)
+
+        return False
+
+    except Exception as e:
+        return False
