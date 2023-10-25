@@ -2,7 +2,7 @@
   <img src="https://i.ibb.co/fSc0xXb/web3dev-ma-snipegenius-py.png" alt="SnipeGenius">
 </p>
 
-# SnipeGenius (V1.5.1 Stable Fix)
+# SnipeGenius
 SnipeGenius is a sniping bot designed to monitor newly created trading pair events. Upon detection, it conducts a series of safety inspections to identify potential risks like honeypots, rug pulls, or transaction taxes. Following these checks, SnipeGenius runs buy/sell simulations to assess risks further before executing a purchase.
 
 * Note: Currently, the only supported DEX is PancakeSwap, with plans to include more in the future. Safety checks within the system are continually being enhanced to ensure secure transactions. As i expand to support additional DEX platforms, my focus on robust safety measures remains a top priority to provide a reliable and secure trading experience for our users.
