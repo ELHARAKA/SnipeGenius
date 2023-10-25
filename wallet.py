@@ -80,19 +80,20 @@ def get_credentials():
 
 def get_google_details():
     from config import logger, file_logger
+    google_cse_id = "2202ec6543da44f6e"
+
     if os.path.exists("google.txt"):
         with open("google.txt", "r") as file:
             lines = file.readlines()
             google_api_key = lines[0].strip()
-            google_cse_id = lines[1].strip()
-        if google_api_key and google_cse_id:
+
+        if google_api_key:
             return google_api_key, google_cse_id
         else:
-            logger.warning("Invalid Google details. Please re-import your Google credentials.")
+            logger.warning("Invalid Google API key. Please re-import your Google credentials.")
             return None
     else:
         google_api_key = input("Enter your Google API key: ")
-        google_cse_id = input("Enter your Google CSE ID: ")
         with open("google.txt", "w") as file:
             file.write(f"{google_api_key}\n{google_cse_id}")
         return google_api_key, google_cse_id
