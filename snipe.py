@@ -62,7 +62,7 @@ def main(percentage_for_amount_in, verbosity):
                 event_filter = recreate_event_filter()
 
         except KeyboardInterrupt:
-            logger.info(f"SnipeEnding @ {time.strftime('%H:%M:%S /%Y-%m-%d/', time.localtime())}")
+            logger.info(f"Sniping Ended @ {time.strftime('%H:%M:%S /%Y-%m-%d/', time.localtime())}")
             exit(0)
 
 if __name__ == "__main__":
