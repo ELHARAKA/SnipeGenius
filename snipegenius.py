@@ -58,7 +58,7 @@ def perform_safety_check(tokentobuy, chain_id):
 
     while True:
         try:
-            logger.info(f"Token Address: {tokentobuy}")
+            logger.debug(f"New Token Found: {tokentobuy}")
             logger.info("Performing Safety Checks...")
             # Token Sniffer check
             tokensniffer_response = requests.get(tokensniffer_url)
@@ -96,7 +96,7 @@ def perform_safety_check(tokentobuy, chain_id):
 
 def check_token_safety(tokentobuy, chain_id):
     try:
-        time.sleep(10)
+        time.sleep(7)
         is_safety_valid, score = perform_safety_check(tokentobuy, chain_id)
 
         if is_safety_valid:
