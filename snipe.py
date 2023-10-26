@@ -67,7 +67,7 @@ def main(percentage_for_amount_in, verbosity):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--p', type=float, required=True, help='Percentage for amount_in (e.g., 1 for 1%)')
+    parser.add_argument('--p', type=float, required=True, help='Percentage of wallet balance to use for token purchase (e.g., 1 for 1%)')
     parser.add_argument('--v', type=int, choices=[1, 2], default=1, help='Verbosity level. 1 for default, and 2 for showing all logs.')
     args = parser.parse_args()
     main(args.p, args.v)
