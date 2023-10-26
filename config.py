@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.5.0_Stable
+# Version: 1.5.2
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -21,14 +21,14 @@ import json
 from sys import exit
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
-from wallet import get_credentials, get_google_details
+from wallet import get_credentials, get_token_sniffer_details
 
 def display_splash():
     ascii_art = pyfiglet.figlet_format("SnipeGenius")
     print(colored(ascii_art, 'white'))
 
     print("--------------------------------------------------------")
-    print(colored("SnipeGenius 🥞 Version: 1.5.0_Stable", 'yellow'))
+    print(colored("SnipeGenius 🥞 Version: 1.5.2", 'yellow'))
     print("--------------------------------------------------------\n")
     print("Developed by " + colored("Fahd El Haraka ©", 'red'))
     print("Telegram: " + colored("@thisiswhosthis", 'red'))
@@ -55,40 +55,40 @@ stream_handler.setFormatter(colorlog.ColoredFormatter(
         'CRITICAL': 'red,bg_white'
     }
 ))
-stream_handler.setLevel(logging.INFO)  # default level
+stream_handler.setLevel(logging.INFO)
 
 # Set up logger for logging to both file and terminal
 logger = logging.getLogger('logger')
-logger.setLevel(logging.INFO)  # default level
+logger.setLevel(logging.INFO)
 
 # File handler for logging to file
 file_handler = logging.FileHandler('trade_history.log')
-file_handler.setLevel(logging.INFO)  # default level
+file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
 logger.addHandler(file_handler)
-logger.addHandler(stream_handler)  # add shared stream handler
+logger.addHandler(stream_handler)
 
 # Set up file_logger for logging to file only (by default)
 file_logger = logging.getLogger('file_logger')
-file_logger.setLevel(logging.INFO)  # default level
+file_logger.setLevel(logging.INFO)
 file_file_handler = logging.FileHandler('trade_history.log')
-file_file_handler.setLevel(logging.INFO)  # default level
+file_file_handler.setLevel(logging.INFO)
 file_file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
 file_logger.addHandler(file_file_handler)
 
 def initialize_logging(verbosity):
-    log_level = logging.INFO  # default level
+    log_level = logging.INFO
 
     if verbosity == 2:
-        log_level = logging.DEBUG  # enabling debug logs for both logger and file_logger
-        file_logger.addHandler(stream_handler)  # add shared stream handler to file_logger
+        log_level = logging.DEBUG
+        file_logger.addHandler(stream_handler)
 
     logger.setLevel(log_level)
     file_logger.setLevel(log_level)
-    stream_handler.setLevel(log_level)  # adjust level of shared stream handler
+    stream_handler.setLevel(log_level)
 
 # Initialize and connect to the Binance Smart Chain node using Web3.
-w3 = Web3(Web3.HTTPProvider('https://bsc-dataseed2.binance.org')) # Better use a private node.
+w3 = Web3(Web3.HTTPProvider('https://bsc-dataseed2.binance.org'))
 if w3.is_connected():
     logger.info("Connected to node.")
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -98,21 +98,19 @@ else:
 
 my_address = ""
 private_key = ""
-google_api_key = ""
-google_cse_id = ""
+token_sniffer_api_key = ""
 
-def update_credentials(address, key, g_api_key, g_cse_id):
-    global my_address, private_key, google_api_key, google_cse_id
+def update_credentials(address, key, t_api_key):
+    global my_address, private_key, token_sniffer_api_key
     my_address = address
     private_key = key
-    google_api_key = g_api_key
-    google_cse_id = g_cse_id
+    token_sniffer_api_key = t_api_key
 
 def initialize_credentials():
-    global my_address, private_key, google_api_key, google_cse_id
+    global my_address, private_key, token_sniffer_api_key
     my_address, private_key = get_credentials()
-    google_api_key, google_cse_id = get_google_details()
-    update_credentials(my_address, private_key, google_api_key, google_cse_id)
+    token_sniffer_api_key = get_token_sniffer_details()
+    update_credentials(my_address, private_key, token_sniffer_api_key)
 
 wbnb_address = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
 router_address = '0x10ED43C718714eb63d5aA57B78B54704E256024E'
@@ -122,16 +120,16 @@ minimum_sleep = 3
 #Event Topic for "CreatedPair"
 pair_created_topic = '0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9'
 
-# Load ABI (Application Binary Interface) from a JSON file
+# Load ABI
 def load_abi_from_file(filename):
     with open(filename, 'r') as f:
         return json.load(f)
 
 # ABI Files
-factory_abi = load_abi_from_file('factory_abi.json')
-router_abi = load_abi_from_file('router_abi.json')
-pair_abi = load_abi_from_file('pair_abi.json')
-wbnb_abi = load_abi_from_file('wbnb_abi.json')
+factory_abi = load_abi_from_file('abi/factory_abi.json')
+router_abi = load_abi_from_file('abi/router_abi.json')
+pair_abi = load_abi_from_file('abi/pair_abi.json')
+wbnb_abi = load_abi_from_file('abi/wbnb_abi.json')
 
 # Create Instances
 router = w3.eth.contract(address=router_address, abi=router_abi)

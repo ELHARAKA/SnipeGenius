@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.5.0_Stable
+# Version: 1.5.2
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -37,7 +37,7 @@ def generate_key(password: str, salt=None):
     return key, salt
 
 def get_credentials():
-    from config import logger, file_logger
+    from config import logger
     if os.path.exists("wallet.txt"):
         incorrect_attempts = 0
         while True:
@@ -82,22 +82,19 @@ def get_credentials():
         logger.info("Wallet setup successful. Your wallet details have been encrypted and saved.")
         return address, private_key
 
-def get_google_details():
-    from config import logger, file_logger
-    google_cse_id = "2202ec6543da44f6e"
+def get_token_sniffer_details():
+    from config import logger
+    if os.path.exists("tokensniffer.txt"):
+        with open("tokensniffer.txt", "r") as file:
+            t_api_key = file.read().strip()
 
-    if os.path.exists("google.txt"):
-        with open("google.txt", "r") as file:
-            lines = file.readlines()
-            google_api_key = lines[0].strip()
-
-        if google_api_key:
-            return google_api_key, google_cse_id
+        if t_api_key:
+            return t_api_key
         else:
-            logger.warning("Invalid Google API key. Please re-import your Google credentials.")
+            logger.warning("Invalid Token Sniffer API key. Please re-import your Token Sniffer credentials.")
             return None
     else:
-        google_api_key = input("Enter your Google API key: ")
-        with open("google.txt", "w") as file:
-            file.write(f"{google_api_key}\n{google_cse_id}")
-        return google_api_key, google_cse_id
+        t_api_key = input("Enter your Token Sniffer API key: ")
+        with open("tokensniffer.txt", "w") as file:
+            file.write(t_api_key)
+        return t_api_key

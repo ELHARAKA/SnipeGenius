@@ -14,7 +14,7 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 ###
 - coinOps.py: Retrieves specified token and WBNB balances for a given address.
 ###
-- wallet.py: Handles encryption, storage, and retrieval of wallet and Google credentials.
+- wallet.py: Handles encryption, storage, and retrieval of wallet and TokenSniffer API credentials.
 ###
 - snipegenius.py: Conducts safety checks on tokens by verifying ownership, checking against a blacklist, analyzing token parameters, performing simulated transactions, and searching for associated risks online.
 ###
@@ -50,11 +50,11 @@ pip3 install requirements.txt
    ```
 
 ### Run and Setup
-* Upon code execution, you'll be prompted to enter wallet details and Google API key.
+* Upon code execution, you'll be prompted to enter wallet details and TokenSniffer API key.
 1. Run `sudo python3 snipe.py`
 2. Input wallet address, private key, and encryption password. Details saved encrypted in wallet.txt locally.
-3. Input Google API key
-   * Note: To obtain your Google API Key, follow these instructions [Google API Key](https://developers.google.com/webmaster-tools/search-console-api/v1/configure)
+3. Input TokenSniffer API key
+   * Note: To obtain your TokenSniffer API Key, follow these instructions [TokenSniffer API](https://tokensniffer.com/TokenSnifferAPI)
 
 ## Contribution
 We warmly welcome contributions from the community, in adherence with the [licensing](https://github.com/ELHARAKA/SnipeGenius/blob/main/LICENSE) terms. Whether you are a veteran developer or a newcomer, your input is highly valued. Here are some ways you can contribute to SnipeGenius:

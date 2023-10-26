@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 1.5.0_Stable
+# Version: 1.5.2
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -55,15 +55,11 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wb
         return
 
     chain_id = 56
-    is_safe = check_token_safety(tokentobuy, pair_address, chain_id, w3, router, wbnb)
-    if is_safe is not None:
-        if is_safe:
-            logger.info("Token is safe. Proceeding.")
-        else:
-            logger.warning("Token is not safe. Aborting.")
-            return
+    is_safe, score = check_token_safety(tokentobuy, chain_id)
+    if is_safe:
+        logger.debug(f"Token is safe with a score of {score}. Proceeding.")
     else:
-        logger.warning("Could not determine the safety of the token. Aborting.")
+        logger.warning(f"Aborting due to a likely scam token with a score of {score}.")
         return
 
     file_logger.info(f"WBNB address: {wbnb_address}")
@@ -223,7 +219,6 @@ def handle_event(event, percentage_for_amount_in):
             acceptable_slippage = 0.05
             amount_out_min = int(amount_in * (1 - acceptable_slippage))
             logger.info(f"New Pair Address: {pair_address}")
-            logger.info("Performing Safety Checks...")
             execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve)
         else:
             logger.info(f"Insufficient liquidity. Checking for new Tokens")
