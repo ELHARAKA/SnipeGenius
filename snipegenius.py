@@ -55,16 +55,21 @@ def perform_safety_check(tokentobuy, chain_id):
 
     total_checks = len(safety_checks)
     passed_checks = 0
+    first_iteration = True
 
     while True:
         try:
-            logger.debug(f"New Token Found: {tokentobuy}")
-            logger.info("Performing Safety Checks...")
+            if first_iteration:
+                logger.debug(f"New Token Found: {tokentobuy}")
+                logger.info("Performing Safety Checks...")
+                first_iteration = False
             # Token Sniffer check
             tokensniffer_response = requests.get(tokensniffer_url)
             tokensniffer_response.raise_for_status()
             tokensniffer_data = json.loads(tokensniffer_response.text)
             file_logger.debug(f"{tokensniffer_data}")
+            if 'score' not in tokensniffer_data:
+                logger.warning(f"Score missing in tokensniffer_data: {tokensniffer_data}")
 
             if tokensniffer_data.get('status') == 'ready':
                 for key, expected_value in safety_checks.items():
@@ -84,7 +89,7 @@ def perform_safety_check(tokentobuy, chain_id):
 
             elif tokensniffer_data.get('status') == 'pending':
                 logger.info("Token data is pending. Retrying in 7 seconds.")
-                time.sleep(7)
+                time.sleep(10)
 
         except requests.exceptions.RequestException as e:
             file_logger.error(f"Request error: {e}")
@@ -96,7 +101,7 @@ def perform_safety_check(tokentobuy, chain_id):
 
 def check_token_safety(tokentobuy, chain_id):
     try:
-        time.sleep(7)
+        time.sleep(10)
         is_safety_valid, score = perform_safety_check(tokentobuy, chain_id)
 
         if is_safety_valid:
