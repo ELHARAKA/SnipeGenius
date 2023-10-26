@@ -218,7 +218,7 @@ def handle_event(event, percentage_for_amount_in):
             amount_in = int(balance * percentage_for_amount_in)
             acceptable_slippage = 0.05
             amount_out_min = int(amount_in * (1 - acceptable_slippage))
-            file_logger.info(f"New Pair Address: {pair_address}")
+            logger.info(f"New Pair Address: {pair_address}")
             execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve)
         else:
             logger.info(f"Insufficient liquidity. Checking for new Tokens")
