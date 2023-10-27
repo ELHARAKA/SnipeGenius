@@ -50,11 +50,11 @@ def perform_safety_check(tokentobuy, chain_id):
                 try:
                     float_score = float(score)
                 except ValueError:
-                    logger.error(f"Score conversion failed: {score}")
+                    logger.error(f"Score conversion failed: {score}%")
                     return False
 
                 is_safe = float_score == 100
-                logger.info(f"Token Safety Score: {score}")
+                logger.info(f"Token Safety Score: {score}%")
                 return is_safe, score
 
             else:
