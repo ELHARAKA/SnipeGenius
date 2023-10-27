@@ -221,7 +221,7 @@ def handle_event(event, percentage_for_amount_in, min_safety_score):
             for slippage in slippage_levels:
                 try:
                     amount_out_min = int(amount_in * (1 - slippage))
-                    logger.info(f"Trying with slippage: {slippage * 100}%")
+                    logger.info(f"Setting slippage to {slippage * 100}%")
                     execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score)
                     break  # If the buy is successful, break out of the loop
                 except Exception as e:
