@@ -20,25 +20,6 @@ from config import logger, file_logger
 
 MAX_RETRIES = 3
 
-def is_blacklisted(tokentobuy, w3):
-    # ABI for ERC-20 owner function
-    abi = [{
-        "constant": True,
-        "inputs": [],
-        "name": "owner",
-        "outputs": [{"name": "", "type": "address"}],
-        "payable": False,
-        "stateMutability": "view",
-        "type": "function"
-    }]
-    token_contract = w3.eth.contract(address=tokentobuy, abi=abi)
-    owner_address = token_contract.functions.owner().call()
-
-    with open('blacklist.txt', 'r') as file:
-        blacklist = file.read().splitlines()
-
-    return owner_address.lower() in blacklist
-
 def perform_safety_check(tokentobuy, chain_id):
     from config import token_sniffer_api_key
 
@@ -77,7 +58,7 @@ def perform_safety_check(tokentobuy, chain_id):
                 return is_safe, score
 
             else:
-                logger.info("Token data is pending. Retrying in 10 seconds.")
+                file_logger.info("Token data is pending. Retrying in 10 seconds.")
                 retries += 1
                 time.sleep(10)
 
@@ -86,16 +67,12 @@ def perform_safety_check(tokentobuy, chain_id):
             retries += 1
             time.sleep(10)
 
-    logger.error("Max retries reached. Aborting.")
+    logger.error("Max retry limit hit; operation aborted. If this issue persists, please submit an issue request on GitHub.")
     return False
 
 def check_token_safety(tokentobuy, chain_id, w3):  # Add w3 as an argument
+    score = 'N/A'  # Initialize score
     try:
-        # Check if the owner of the token is blacklisted
-        if is_blacklisted(tokentobuy, w3):
-            logger.warning(f"The owner of Token {tokentobuy} is blacklisted.")
-            return False, 'Owner Blacklisted'
-
         time.sleep(10)
         is_safety_valid, score = perform_safety_check(tokentobuy, chain_id)
 
@@ -106,4 +83,4 @@ def check_token_safety(tokentobuy, chain_id, w3):  # Add w3 as an argument
 
     except Exception as e:
         logger.error(f"Error in check_token_safety: {e}")
-        return False, 'N/A'
+        return False, score
