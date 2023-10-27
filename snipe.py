@@ -28,9 +28,9 @@ def recreate_event_filter():
         'topics': [config.pair_created_topic]
     })
 
-def main(percentage_for_amount_in, verbosity):
+def main(percentage_for_amount_in, verbosity, min_safety_score):
     config.initialize_logging(verbosity)
-    percentage_for_amount_in /= 100  # Convert percentage to decimal
+    percentage_for_amount_in /= 100
     config.initialize_credentials()
     logger.info("Sniping Started...")
 
@@ -48,7 +48,7 @@ def main(percentage_for_amount_in, verbosity):
 
             while not event_queue.empty():
                 file_logger.debug("Processing an event...")
-                handle_event(event_queue.get(), percentage_for_amount_in)  # Passed the parameter to handle_event
+                handle_event(event_queue.get(), percentage_for_amount_in, min_safety_score)
                 file_logger.debug("Event processed.")
 
             sleep_duration = max(minimum_sleep, event_queue.qsize())
@@ -68,6 +68,7 @@ def main(percentage_for_amount_in, verbosity):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--p', type=float, required=True, help='Percentage of wallet balance to use for token purchase (e.g., 1 for 1%)')
+    parser.add_argument('--score', type=float, required=False, default=100, help='Minimum safety score to proceed with a token (e.g., 100 for 100%).')
     parser.add_argument('--v', type=int, choices=[1, 2], default=1, help='Verbosity level. 1 for default, and 2 for showing all logs.')
     args = parser.parse_args()
-    main(args.p, args.v)
+    main(args.p, args.v, args.score)

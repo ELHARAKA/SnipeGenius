@@ -20,7 +20,7 @@ from config import logger, file_logger
 
 MAX_RETRIES = 3
 
-def perform_safety_check(tokentobuy, chain_id):
+def perform_safety_check(tokentobuy, chain_id, min_safety_score):
     from config import token_sniffer_api_key
 
     base_url = "https://tokensniffer.com/api/v2/tokens/"
@@ -53,7 +53,7 @@ def perform_safety_check(tokentobuy, chain_id):
                     logger.error(f"Score conversion failed: {score}%")
                     return False
 
-                is_safe = float_score == 100
+                is_safe = float_score >= min_safety_score
                 file_logger.info(f"Token Safety Score: {score}%")
                 return is_safe, score
 
@@ -71,11 +71,11 @@ def perform_safety_check(tokentobuy, chain_id):
     logger.error("Max retry limit hit; operation aborted. If this issue persists, please submit an issue request on GitHub.")
     return False
 
-def check_token_safety(tokentobuy, chain_id, w3):
+def check_token_safety(tokentobuy, chain_id, min_safety_score):
     score = 'N/A'
     try:
         time.sleep(10)
-        is_safety_valid, score = perform_safety_check(tokentobuy, chain_id)
+        is_safety_valid, score = perform_safety_check(tokentobuy, chain_id, min_safety_score)
 
         if is_safety_valid:
             return True, score

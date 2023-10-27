@@ -20,7 +20,7 @@ from coinOps import get_wbnb_balance
 from snipegenius import check_token_safety
 
 # Execute a buy transaction
-def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve):
+def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score):
     from config import private_key, my_address
     # Check numerical arguments are of type int
     if not all(isinstance(x, int) for x in [amount_out_min, wbnb_reserve]):
@@ -55,7 +55,7 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wb
         return
 
     chain_id = 56
-    is_safe, score = check_token_safety(tokentobuy, chain_id, w3)
+    is_safe, score = check_token_safety(tokentobuy, chain_id, min_safety_score)
     if is_safe:
         logger.debug(f"Safe Token, score: {score}%. Proceeding.")
     else:
@@ -197,7 +197,7 @@ def check_liquidity(pair_address, wbnb_address, w3):
         return False, wbnb_reserve
 
 # Handle events and Execute Buy
-def handle_event(event, percentage_for_amount_in):
+def handle_event(event, percentage_for_amount_in, min_safety_score):
     try:
         decoded_data = w3.eth.contract(abi=[pair_created_event_abi]).events.PairCreated().process_log(event)
         pair_address = decoded_data['args']['pair']
@@ -219,7 +219,7 @@ def handle_event(event, percentage_for_amount_in):
             acceptable_slippage = 0.05
             amount_out_min = int(amount_in * (1 - acceptable_slippage))
             logger.info(f"New Pair Address: {pair_address}")
-            execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve)
+            execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score)
         else:
             logger.info(f"Insufficient liquidity. Checking for new Tokens")
     except Exception as e:
