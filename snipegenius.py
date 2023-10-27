@@ -65,7 +65,6 @@ def perform_safety_check(tokentobuy, chain_id):
         except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
             sanitized_error = str(e).replace(token_sniffer_api_key, 'HIDDEN')
             logger.error(f"Request error: {sanitized_error}. Retrying.")
-            file_logger.error(f"Request error: {e}. Retrying.")
             retries += 1
             time.sleep(10)
 
