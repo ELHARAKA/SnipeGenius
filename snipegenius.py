@@ -54,7 +54,7 @@ def perform_safety_check(tokentobuy, chain_id):
                     return False
 
                 is_safe = float_score == 100
-                logger.critical(f"Token Safety Score: {score}%")
+                file_logger.info(f"Token Safety Score: {score}%")
                 return is_safe, score
 
             else:
