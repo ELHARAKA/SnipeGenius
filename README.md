@@ -46,12 +46,16 @@ pip3 install requirements.txt
 2. The --v parameter is optional. Use 2 to show all logs. Verbosity level 2 is recommended only for debugging purposes.
    * To debug logs later without passing --v 2, check the log file "trade_history.log".
    ```bash
-   sudo python3 snipe.py --p 1
+  Defaul Logs:
+  python3 snipe.py --p 1
+
+  Advanced Logs:
+  python3 snipe.py --p 1 --v 2
    ```
 
 ### Run and Setup
 * Upon code execution, you'll be prompted to enter wallet details and TokenSniffer API key.
-1. Run `sudo python3 snipe.py`
+1. Run `python3 snipe.py --p 1` (Replace 1 with your desired value)
 2. Input wallet address, private key, and encryption password. Details saved encrypted in wallet.txt locally.
 3. Input TokenSniffer API key
    * Note: To obtain your TokenSniffer API Key, follow these instructions [TokenSniffer API](https://tokensniffer.com/TokenSnifferAPI)
