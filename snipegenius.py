@@ -27,8 +27,8 @@ def perform_safety_check(tokentobuy, chain_id):
     query_params = (
         f"apikey={token_sniffer_api_key}&"
         "include_metrics=true&"
-        "include_tests=true&"
-        "block_until_ready=false"
+        "include_tests=false&"
+        "block_until_ready=true"
     )
 
     tokensniffer_url = f"{base_url}{chain_id}/{tokentobuy}?{query_params}"
