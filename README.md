@@ -45,13 +45,16 @@ pip3 install requirements.txt
 1. The --p parameter is essential to designate the percentage of amount for trade; for instance, 1 denotes 1%.
 2. The --v parameter is optional. Use 2 to show all logs. Verbosity level 2 is recommended only for debugging purposes.
    * To debug logs later without passing --v 2, check the log file "trade_history.log".
-   ```bash
+
   Defaul Logs:
+  ```bash
   python3 snipe.py --p 1
+  ```
 
   Advanced Logs:
+  ```bash
   python3 snipe.py --p 1 --v 2
-   ```
+  ```
 
 ### Run and Setup
 * Upon code execution, you'll be prompted to enter wallet details and TokenSniffer API key.
