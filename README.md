@@ -42,18 +42,20 @@ pip3 install requirements.txt
 ```
 
 ### Usage:
-1. The --p parameter is essential to designate the percentage of amount for trade; for instance, 1 denotes 1%.
-2. The --v parameter is optional. Use 2 to show all logs. Verbosity level 2 is recommended only for debugging purposes.
-   * To debug logs later without passing --v 2, check the log file "trade_history.log".
+1. The --p param is crucial for specifying the trade amount percentage, e.g., 5 represents 5%.
+2. The --s param is optional and sets the minimum safety score for a token; for example, 100 means 100%. (Default: 100)
+   * It's recommended to keep the --score above 75 to avoid the risk of encountering a fraudulent token and losing your money.
+3. The --v param is optional and sets the verbosity level. Use 2 for complete logs, but it's advised only for debugging.
+   * Complete logs can be found in "trade_history.log".
 
   Defaul Logs:
   ```bash
-  python3 snipe.py --p 1
+  python3 snipe.py --p 5 --score 100
   ```
 
-  Advanced Logs:
+  Complete Logs:
   ```bash
-  python3 snipe.py --p 1 --v 2
+  python3 snipe.py --p 5 --score 75 --v 2
   ```
 
 ### Run and Setup
