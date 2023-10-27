@@ -74,7 +74,7 @@ def perform_safety_check(tokentobuy, chain_id):
 
                 is_safe = float_score == 100
                 logger.info(f"Token Safety Score: {score}")
-                return is_safe
+                return is_safe, score
 
             else:
                 logger.info("Token data is pending. Retrying in 10 seconds.")
@@ -105,4 +105,5 @@ def check_token_safety(tokentobuy, chain_id, w3):  # Add w3 as an argument
         return False, score
 
     except Exception as e:
+        logger.error(f"Error in check_token_safety: {e}")
         return False, 'N/A'
