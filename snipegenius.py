@@ -37,7 +37,7 @@ def perform_safety_check(tokentobuy, chain_id):
     retries = 0
     while retries < MAX_RETRIES:
         if first_iteration:
-            logger.info(f"New Token Found: {tokentobuy}")
+            logger.info(f"Token Address: {tokentobuy}")
             logger.info("Performing Safety Checks...")
             first_iteration = False
         try:
