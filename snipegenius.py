@@ -99,8 +99,13 @@ def perform_safety_check(tokentobuy, chain_id):
 
     return passed_checks == total_checks
 
-def check_token_safety(tokentobuy, chain_id):
+def check_token_safety(tokentobuy, chain_id, w3):  # Add w3 as an argument
     try:
+        # Check if the owner of the token is blacklisted
+        if is_blacklisted(tokentobuy, w3):
+            logger.warning(f"The owner of Token {tokentobuy} is blacklisted.")
+            return False, 'Owner Blacklisted'
+
         time.sleep(10)
         is_safety_valid, score = perform_safety_check(tokentobuy, chain_id)
 
