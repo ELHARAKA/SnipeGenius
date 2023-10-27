@@ -216,20 +216,20 @@ def handle_event(event, percentage_for_amount_in, min_safety_score):
 
         if liquidity_status:
             amount_in = int(balance * percentage_for_amount_in)
-            if human_readable_balance > 10:
-                acceptable_slippage = 0.02  # 1% for balances over 10 WBNB
-            elif human_readable_balance > 1:
-                acceptable_slippage = 0.03  # 2% for balances over 1 WBNB
-            else:
-                acceptable_slippage = 0.05  # 5% for smaller balances
+            slippage_levels = [0.05, 0.12, 0.15]  # Define your slippage levels
 
-            amount_out_min = int(amount_in * (1 - acceptable_slippage))
-            acceptable_slippage = 0.05
-            amount_out_min = int(amount_in * (1 - acceptable_slippage))
-            logger.info(f"New Pair Address: {pair_address}")
-            execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score)
+            for slippage in slippage_levels:
+                try:
+                    amount_out_min = int(amount_in * (1 - slippage))
+                    logger.info(f"Trying with slippage: {slippage * 100}%")
+                    execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score)
+                    break  # If the buy is successful, break out of the loop
+                except Exception as e:
+                    logger.error(f"Failed with slippage {slippage * 100}%. Retrying... Error: {e}")
+
         else:
             logger.info(f"Insufficient liquidity. Checking for new Tokens")
     except Exception as e:
         logger.error(f"Error processing event, please check Log File")
         file_logger.error(f"Error processing event: {e}")
+
