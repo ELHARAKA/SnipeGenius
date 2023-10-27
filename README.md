@@ -16,7 +16,7 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 ###
 - wallet.py: Handles encryption, storage, and retrieval of wallet and TokenSniffer API credentials.
 ###
-- snipegenius.py: Conducts safety checks on tokens, checking against a blacklist.
+- snipegenius.py: Conducts safety checks on tokens.
 ###
 - transactions: Manages and executes buy transactions on new token pairs.
 ###
