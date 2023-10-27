@@ -57,9 +57,9 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wb
     chain_id = 56
     is_safe, score = check_token_safety(tokentobuy, chain_id, w3)
     if is_safe:
-        logger.debug(f"Token is safe with a score of {score}%. Proceeding.")
+        logger.debug(f"Safe Token, score: {score}%. Proceeding.")
     else:
-        logger.warning(f"Aborting due to a likely scam token with a score of {score}%.")
+        logger.warning(f"Scam risk, score: {score}%. Aborting.")
         return
 
     file_logger.info(f"WBNB address: {wbnb_address}")
