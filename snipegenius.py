@@ -64,15 +64,15 @@ def perform_safety_check(tokentobuy, chain_id):
 
         except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
             sanitized_error = str(e).replace(token_sniffer_api_key, 'HIDDEN')
-            logger.error(f"Request error: {sanitized_error}. Retrying.")
+            file_logger.error(f"Request error: {sanitized_error}. Retrying.")
             retries += 1
             time.sleep(10)
 
     logger.error("Max retry limit hit; operation aborted. If this issue persists, please submit an issue request on GitHub.")
     return False
 
-def check_token_safety(tokentobuy, chain_id, w3):  # Add w3 as an argument
-    score = 'N/A'  # Initialize score
+def check_token_safety(tokentobuy, chain_id, w3):
+    score = 'N/A'
     try:
         time.sleep(10)
         is_safety_valid, score = perform_safety_check(tokentobuy, chain_id)
