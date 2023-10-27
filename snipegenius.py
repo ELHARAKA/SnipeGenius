@@ -18,6 +18,8 @@ import time
 import requests
 from config import logger, file_logger
 
+MAX_RETRIES = 3
+
 def is_blacklisted(tokentobuy, w3):
     # ABI for ERC-20 owner function
     abi = [{
@@ -39,65 +41,53 @@ def is_blacklisted(tokentobuy, w3):
 
 def perform_safety_check(tokentobuy, chain_id):
     from config import token_sniffer_api_key
-    base_url = "https://tokensniffer.com/api/v2/tokens"
-    query_params = {
-        "apikey": token_sniffer_api_key,
-        "include_metrics": "true",
-        "include_tests": "true",
-        "block_until_ready": "false"
-    }
-    query_string = "&".join(f"{k}={v}" for k, v in query_params.items())
-    tokensniffer_url = f"{base_url}/{chain_id}/{tokentobuy}?{query_string}"
 
-    safety_checks = {
-        'score': lambda x: x == 100
-    }
+    base_url = "https://tokensniffer.com/api/v2/tokens/"
+    query_params = (
+        f"apikey={token_sniffer_api_key}&"
+        "include_metrics=true&"
+        "include_tests=true&"
+        "block_until_ready=false"
+    )
 
-    total_checks = len(safety_checks)
-    passed_checks = 0
+    tokensniffer_url = f"{base_url}{chain_id}/{tokentobuy}?{query_params}"
+
     first_iteration = True
-
-    while True:
+    retries = 0
+    while retries < MAX_RETRIES:
+        if first_iteration:
+            logger.debug(f"New Token Found: {tokentobuy}")
+            logger.info("Performing Safety Checks...")
+            first_iteration = False
         try:
-            if first_iteration:
-                logger.debug(f"New Token Found: {tokentobuy}")
-                logger.info("Performing Safety Checks...")
-                first_iteration = False
-            # Token Sniffer check
-            tokensniffer_response = requests.get(tokensniffer_url)
-            tokensniffer_response.raise_for_status()
-            tokensniffer_data = json.loads(tokensniffer_response.text)
-            file_logger.debug(f"{tokensniffer_data}")
-            if 'score' not in tokensniffer_data:
-                logger.warning(f"Score missing in tokensniffer_data: {tokensniffer_data}")
+            response = requests.get(tokensniffer_url)
+            response.raise_for_status()
+            data = json.loads(response.text)
 
-            if tokensniffer_data.get('status') == 'ready':
-                for key, expected_value in safety_checks.items():
-                    actual_value = tokensniffer_data.get(key, 'N/A')
-                    if callable(expected_value):
-                        try:
-                            float_actual_value = float(actual_value)
-                        except ValueError:
-                            file_logger.debug(f"Check failed for {key}: {actual_value}")
-                            continue
+            if data.get('status') == 'ready':
+                score = data.get('score', 'N/A')
+                try:
+                    float_score = float(score)
+                except ValueError:
+                    logger.error(f"Score conversion failed: {score}")
+                    return False
 
-                        if expected_value(float_actual_value):
-                            passed_checks += 1
+                is_safe = float_score == 100
+                logger.info(f"Token Safety Score: {score}")
+                return is_safe
 
-                logger.info(f"Token Safety Score: {tokensniffer_data.get('score', 'N/A')}")
-                break  # exit the while loop
-
-            elif tokensniffer_data.get('status') == 'pending':
-                logger.info("Token data is pending. Retrying in 7 seconds.")
+            else:
+                logger.info("Token data is pending. Retrying in 10 seconds.")
+                retries += 1
                 time.sleep(10)
 
-        except requests.exceptions.RequestException as e:
-            file_logger.error(f"Request error: {e}")
+        except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+            logger.error(f"Request error: {e}. Retrying.")
+            retries += 1
+            time.sleep(10)
 
-        except json.JSONDecodeError as e:
-            file_logger.error(f"JSON decoding error: {e}")
-
-    return passed_checks == total_checks
+    logger.error("Max retries reached. Aborting.")
+    return False
 
 def check_token_safety(tokentobuy, chain_id, w3):  # Add w3 as an argument
     try:
