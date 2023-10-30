@@ -57,7 +57,7 @@ def perform_safety_check(tokentobuy, chain_id, min_safety_score):
                 file_logger.info(f"Token Safety Score: {score}%")
 
                 if is_safe:
-                    logger.info("Token is safe. Waiting for 5 minutes before the second check...")
+                    logger.info(f"Token is {score}% safe. Waiting 2 mins for another check.")
                     # Wait for 2 minutes before proceeding with the second check
                     time.sleep(120)
                     continue  # Retry the safety check
