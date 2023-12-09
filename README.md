@@ -18,7 +18,7 @@ SnipeGenius is a sniping bot designed to monitor newly created trading pair even
 ###
 - snipegenius.py: Conducts safety checks on tokens.
 ###
-- transactions: Manages and executes buy transactions on new token pairs.
+- transactions.py: Manages and executes buy transactions on new token pairs.
 ###
 - snipe.py: Initiates SnipeGenius.
 
