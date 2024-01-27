@@ -70,7 +70,7 @@ pip3 install requirements.txt
 SnipeGenius is proprietary software. The use, distribution, and modification of this software is governed by the license agreement provided in the [LICENSE](https://github.com/ELHARAKA/SnipeGenius/blob/main/LICENSE) file in this repository.
 
 ## Donations
-If this tool helped in any way, consider making a donation to support the developer:
+* If this tool helped in any way, consider making a donation to support the developer:
 
-ETH/BSC/POLY: 0x9f05c48003747eB6A5cC9C874cbE00Df75699673
-BTC Address:  bc1q6zf7gxr7xqktv7gqdt7k9nawq8mu0xs99xrzrf
+1. ETH/BSC/POLY: 0x9f05c48003747eB6A5cC9C874cbE00Df75699673
+2. BTC Address:  bc1q6zf7gxr7xqktv7gqdt7k9nawq8mu0xs99xrzrf
