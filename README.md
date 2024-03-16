@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.ibb.co/PYsK1cr/snpepancakegenius-fotor-bg-remover-2023102611743.png" alt="SnipeGenius">
+  <img src="https://i.ibb.co/PYsK1cr/snpepancakegenius-fotor-bg-remover-2023-2024102611743.png" alt="SnipeGenius">
 </p>
 
 # SnipeGenius

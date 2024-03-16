@@ -7,8 +7,8 @@
 # GitHub: https://github.com/ELHARAKA
 
 """
-© Copyright 2023
-Proprietary Software by Fahd El Haraka, 2023.
+© Copyright 2023-2024
+Proprietary Software by Fahd El Haraka, 2023-2024.
 Unauthorized use, duplication, modification, or distribution is strictly prohibited.
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
