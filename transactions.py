@@ -20,7 +20,7 @@ from coinOps import get_wbnb_balance
 from snipegenius import check_token_safety
 
 # Execute a buy transaction
-def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score):
+def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score, wallet_percentage):
     from config import private_key, my_address
     # Check numerical arguments are of type int
     if not all(isinstance(x, int) for x in [amount_out_min, wbnb_reserve]):
@@ -67,9 +67,9 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wb
     file_logger.info(f"Router address: {router.address}")
     file_logger.info("Checking allowance.")
 
-    percentage_for_allowance = 1.0  # 100%
+    #percentage_for_allowance = 1.0  # 100%
     balance = w3.eth.get_balance(my_address)
-    allowance_needed = int(balance * percentage_for_allowance)
+    allowance_needed = int(balance * wallet_percentage / 100)
     allowance = wbnb.functions.allowance(my_address, router.address).call()
 
     current_block = w3.eth.get_block('latest')['number']
@@ -215,14 +215,15 @@ def handle_event(event, percentage_for_amount_in, min_safety_score):
         file_logger.info(f"Your Wallet Balance: {human_readable_balance} WBNB")
 
         if liquidity_status:
-            amount_in = int(balance * percentage_for_amount_in)
+            amount_in = int(balance * percentage_for_amount_in)  # This uses the wallet's balance percentage.
             slippage_levels = [0.05, 0.12, 0.15]  # Define your slippage levels
 
             for slippage in slippage_levels:
                 try:
                     amount_out_min = int(amount_in * (1 - slippage))
                     logger.info(f"Setting slippage to {slippage * 100}%")
-                    execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score)
+                    # Now passing the user's percentage to execute_buy
+                    execute_buy(amount_out_min, pair_address, wbnb_address, router, wbnb, w3, wbnb_reserve, min_safety_score, percentage_for_amount_in)
                     break  # If the buy is successful, break out of the loop
                 except Exception as e:
                     logger.error(f"Failed with slippage {slippage * 100}%. Retrying... Error: {e}")
@@ -232,4 +233,3 @@ def handle_event(event, percentage_for_amount_in, min_safety_score):
     except Exception as e:
         logger.error(f"Error processing event, please check Log File")
         file_logger.error(f"Error processing event: {e}")
-
