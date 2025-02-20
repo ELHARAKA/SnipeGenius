@@ -1,9 +1,0 @@
-pyfiglet
-colorlog
-termcolor
-web3
-requests
-cryptography
-google-api-python-client==2.104.0
-pwinput
-argparse
