@@ -34,7 +34,7 @@ cd SnipeGenius
 ```
 3. Install the necessary Python libraries:
 ```
-pip3 install requirements.txt
+pip3 install -r requirements.txt
 ```
 * Note: If you encounter any errors related to the pwinput package, execute the following command to resolve the issue:
 ```python
