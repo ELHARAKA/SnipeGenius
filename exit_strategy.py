@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 2.6
+# Version: 3.0
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -13,91 +13,213 @@ Unauthorized use, selling, or distribution is strictly prohibited.
 Contact fahd@web3dev.ma for permissions and inquiries.
 """
 
-import time
+import time, sys
 from config import *
 
 def execute_sell(token_address, amount_to_sell, slippage):
+    from config import my_address, private_key, initialize_credentials
+    if not my_address:
+        initialize_credentials()
+        from config import my_address, private_key
+        if not my_address:
+            logger.error("Failed to initialize wallet address in execute_sell. Cannot proceed.")
+            return False
+
     try:
         token_contract = w3.eth.contract(address=token_address, abi=token_abi)
         balance = token_contract.functions.balanceOf(my_address).call()
 
         if balance == 0:
-            logger.warning("No tokens to sell")
+            logger.warning(f"No tokens to sell for {token_address}: balance is 0")
             return False
 
         amount_to_sell = min(amount_to_sell, balance)
-        amount_out_min = int(amount_to_sell * (1 - slippage))
+        current_price = get_current_price(token_address)
+        amount_out_min = 1
 
+        if current_price > 0:
+            expected_bnb_output = amount_to_sell * current_price
+            logger.debug(f"Expected BNB output based on current price: {expected_bnb_output}")
+        else:
+            logger.warning(f"Unable to get valid price for {token_address}, using fallback minimum output")
+
+        logger.info(f"Selling {amount_to_sell} tokens of {token_address} with {slippage*100:.1f}% slippage")
+
+        current_allowance = token_contract.functions.allowance(my_address, router.address).call()
+        if current_allowance < amount_to_sell:
+            logger.info(f"Approving router to spend {amount_to_sell} tokens of {token_address}")
+            nonce = w3.eth.get_transaction_count(my_address)
+            approve_txn = token_contract.functions.approve(
+                router.address,
+                amount_to_sell
+            ).build_transaction({
+                'from': my_address,
+                'gas': 100000,
+                'gasPrice': w3.to_wei('5', 'gwei'),
+                'nonce': nonce,
+                'chainId': 56
+            })
+
+            signed_approve_txn = w3.eth.account.sign_transaction(approve_txn, private_key=private_key)
+            approve_txn_hash = w3.eth.send_raw_transaction(signed_approve_txn.raw_transaction)
+            logger.info(f"Approval transaction sent with hash: {approve_txn_hash.hex()}")
+            approve_receipt = w3.eth.wait_for_transaction_receipt(approve_txn_hash)
+            if approve_receipt.status != 1:
+                logger.error(f"Token approval failed with status {approve_receipt.status}")
+                return False
+
+            logger.debug(f"Token approval successful, proceeding with sell")
+        else:
+            logger.debug(f"Router already has sufficient allowance ({current_allowance}) for selling {amount_to_sell} tokens")
+
+        nonce = w3.eth.get_transaction_count(my_address)
         deadline = int(time.time()) + 120
         txn = router.functions.swapExactTokensForETH(
             amount_to_sell,
             amount_out_min,
-            [token_address, wbnb],
+            [token_address, wbnb_address],
             my_address,
             deadline
-        ).buildTransaction({
+        ).build_transaction({
             'from': my_address,
             'gas': 300000,
             'gasPrice': w3.to_wei('5', 'gwei'),
-            'nonce': w3.eth.get_transaction_count(my_address),
+            'nonce': nonce,
+            'chainId': 56
         })
 
         signed_txn = w3.eth.account.sign_transaction(txn, private_key=private_key)
         txn_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+        logger.info(f"Sell transaction sent with hash: {txn_hash.hex()}")
         txn_receipt = w3.eth.wait_for_transaction_receipt(txn_hash)
 
         if txn_receipt.status == 1:
-            logger.info(f"Sold {amount_to_sell} tokens successfully")
+            logger.info(f"Sold {amount_to_sell} tokens of {token_address} successfully")
+            token_monitor_instance = None
+            found_method = None
 
-            # If token monitor manager exists, notify it that we sold this token
-            import sys
-            if 'token_monitor_manager' in sys.modules and 'token_monitor_manager' in globals():
+            # Method 1: Try importing directly from snipe
+            try:
+                from snipe import token_monitor_manager as tmm1
+                if tmm1 is not None:
+                    token_monitor_instance = tmm1
+                    found_method = "Direct import"
+            except (ImportError, AttributeError) as e:
+                logger.debug(f"Could not import token_monitor_manager from snipe: {str(e)}")
+
+            # Method 2: Try using builtins
+            if token_monitor_instance is None:
                 try:
-                    from snipe import token_monitor_manager, balance_manager
-                    if token_monitor_manager is not None:
-                        token_monitor_manager.remove_token(token_address)
-                    # Update balance after selling
-                    if balance_manager is not None:
-                        balance_manager.update_balance()
+                    import builtins
+                    if hasattr(builtins, 'token_monitor_manager'):
+                        token_monitor_instance = builtins.token_monitor_manager
+                        found_method = "Builtins"
                 except Exception as e:
-                    file_logger.error(f"Error updating token monitor after sell: {str(e)}")
+                    logger.debug(f"Could not access token_monitor_manager from builtins: {str(e)}")
+
+            # Method 3: Check if it's in globals
+            if token_monitor_instance is None and 'token_monitor_manager' in globals():
+                token_monitor_instance = globals()['token_monitor_manager']
+                found_method = "Globals"
+
+            # Method 4: Check if it's in sys.modules
+            if token_monitor_instance is None:
+                try:
+                    if 'snipe' in sys.modules:
+                        module = sys.modules['snipe']
+                        if hasattr(module, 'token_monitor_manager'):
+                            token_monitor_instance = getattr(module, 'token_monitor_manager')
+                            found_method = "Sys modules"
+                except Exception as e:
+                    logger.debug(f"Could not access token_monitor_manager from sys.modules: {str(e)}")
+
+            if token_monitor_instance is not None:
+                logger.debug(f"Found token_monitor_manager via {found_method}")
+
+                try:
+                    active_monitors = getattr(token_monitor_instance, 'active_monitors', {})
+                    if token_address in active_monitors:
+                        monitor = active_monitors[token_address]
+                        monitor.sold = True
+                        logger.debug(f"Token {token_address} marked as sold in token monitor")
+
+                    if token_address in active_monitors and hasattr(active_monitors[token_address], 'sold'):
+                        if active_monitors[token_address].sold:
+                            logger.debug(f"Confirmed token {token_address} is marked as sold")
+                        else:
+                            logger.warning(f"Token {token_address} still not marked as sold, forcing it")
+                            active_monitors[token_address].sold = True
+
+                    token_monitor_instance.remove_token(token_address)
+                    logger.debug(f"Token {token_address} removed from monitoring")
+
+                    try:
+                        balance_manager = None
+
+                        try:
+                            from snipe import balance_manager as bm
+                            balance_manager = bm
+                        except (ImportError, AttributeError):
+                            pass
+
+                        if balance_manager is None:
+                            try:
+                                import builtins
+                                if hasattr(builtins, 'balance_manager'):
+                                    balance_manager = builtins.balance_manager
+                            except Exception:
+                                pass
+
+                        if balance_manager is not None:
+                            balance_manager.update_balance()
+                            logger.debug("Balance updated after sell")
+                    except Exception as e:
+                        logger.debug(f"Could not update balance manager: {str(e)}")
+                except Exception as e:
+                    logger.error(f"Error updating token monitor after sell: {str(e)}")
+            else:
+                logger.warning("Could not find token_monitor_manager to update token status")
 
             return True
-        return False
+        else:
+            logger.error(f"Sell transaction failed with status {txn_receipt.status}")
+            return False
 
     except Exception as e:
-        logger.error(f"Sell transaction failed: {str(e)}")
+        logger.error(f"Sell transaction failed for {token_address}: {str(e)}")
         return False
 
 def get_current_price(token_address):
+    if not token_address:
+        logger.error("Invalid token address provided to get_current_price")
+        return 0
+
     try:
-        # Get the pair address for this token and WBNB
+        if not Web3.is_address(token_address):
+            logger.error(f"Invalid token address format: {token_address}")
+            return 0
+
         factory_contract = w3.eth.contract(address=factory_address, abi=factory_abi)
-        pair_address = factory_contract.functions.getPair(token_address, wbnb).call()
+        pair_address = factory_contract.functions.getPair(token_address, wbnb_address).call()
 
         if pair_address == '0x0000000000000000000000000000000000000000':
             logger.warning(f"No pair found for token {token_address}")
             return 0
 
-        # Get the pair contract
         pair_contract = w3.eth.contract(address=pair_address, abi=pair_abi)
-
-        # Get reserves
         reserves = pair_contract.functions.getReserves().call()
         token0 = pair_contract.functions.token0().call()
 
-        # Determine which reserve is which
         if token0.lower() == token_address.lower():
             token_reserve = reserves[0]
-            wbnb_reserve = reserves[1]
+            bnb_reserve = reserves[1]
         else:
             token_reserve = reserves[1]
-            wbnb_reserve = reserves[0]
+            bnb_reserve = reserves[0]
 
         if token_reserve > 0:
-            # Price in WBNB per token
-            price = wbnb_reserve / token_reserve
-            logger.debug(f"Current price for {token_address}: {price} WBNB")
+            price = bnb_reserve / token_reserve
+            logger.debug(f"Current price for {token_address}: {price} BNB")
             return price
         return 0
     except Exception as e:
@@ -105,35 +227,40 @@ def get_current_price(token_address):
         return 0
 
 def initial_monitoring(token_address, buy_price, buy_amount):
+    from config import my_address, initialize_credentials
+    if not my_address:
+        logger.debug("Wallet address not initialized in initial_monitoring. Initializing credentials...")
+        initialize_credentials()
+        from config import my_address
+        if not my_address:
+            logger.error("Failed to initialize wallet address in initial_monitoring. Cannot proceed.")
+            return "FAILED"
+        logger.debug(f"Wallet address initialized in initial_monitoring: {my_address}")
+
     start_time = time.time()
     highest_price = buy_price
-
     logger.info(f"Starting initial monitoring for {token_address} with buy price {buy_price}")
 
     while time.time() - start_time <= INITIAL_MONITORING_DURATION:
         current_price = get_current_price(token_address)
-        if current_price > 0:  # Only update if we got a valid price
+        if current_price > 0:
             highest_price = max(highest_price, current_price)
             price_change = (current_price - buy_price) / buy_price
             price_from_peak = (current_price - highest_price) / highest_price
 
-            # Log price updates every 15 seconds
             if int(time.time()) % 15 == 0:
-                logger.info(f"Token {token_address}: Current price: {current_price}, Change: {price_change*100:.2f}%, From peak: {price_from_peak*100:.2f}%")
+                logger.debug(f"Token {token_address}: Current price: {current_price}, Change: {price_change*100:.2f}%, From peak: {price_from_peak*100:.2f}%")
 
-            # Take profit at 10% (more aggressive)
             if price_change >= 0.10:
                 logger.info(f"Initial monitoring: Taking quick profit at {price_change*100:.2f}%")
                 if execute_sell(token_address, buy_amount, 0.01):
                     return "SOLD"
 
-            # Stop loss at 10% (more aggressive)
             elif price_change <= -0.10:
                 logger.warning(f"Initial monitoring: Emergency stop loss at {price_change*100:.2f}%")
                 if execute_sell(token_address, buy_amount, 0.05):
                     return "SOLD"
 
-            # Trailing stop: If price drops 5% from highest point
             elif highest_price > buy_price and price_from_peak <= -0.05:
                 logger.warning(f"Initial monitoring: Trailing stop triggered. Down {abs(price_from_peak)*100:.2f}% from peak")
                 if execute_sell(token_address, buy_amount, 0.03):
@@ -141,51 +268,55 @@ def initial_monitoring(token_address, buy_price, buy_amount):
 
         time.sleep(1)
 
-    logger.info(f"Initial monitoring completed for {token_address}")
+    logger.debug(f"Initial monitoring completed for {token_address}")
     return "CONTINUE"
 
 def dynamic_protection_mode(token_address, buy_price, buy_amount):
+    from config import my_address, initialize_credentials
+    if not my_address:
+        logger.debug("Wallet address not initialized in dynamic_protection_mode. Initializing credentials...")
+        initialize_credentials()
+        from config import my_address
+        if not my_address:
+            logger.error("Failed to initialize wallet address in dynamic_protection_mode. Cannot proceed.")
+            return "FAILED"
+        logger.debug(f"Wallet address initialized in dynamic_protection_mode: {my_address}")
+
     start_time = time.time()
     highest_price = buy_price
 
     logger.info(f"Starting dynamic protection mode for {token_address}")
 
-    # Calculate profit targets
-    profit_target_1 = buy_price * 1.2  # 20% profit
-    profit_target_2 = buy_price * 1.5  # 50% profit
+    profit_target_1 = buy_price * 1.2
+    profit_target_2 = buy_price * 1.5
 
     while time.time() - start_time <= DYNAMIC_PROTECTION_DURATION:
         current_price = get_current_price(token_address)
 
-        if current_price > 0:  # Only update if we got a valid price
+        if current_price > 0:
             highest_price = max(highest_price, current_price)
             price_change = (current_price - buy_price) / buy_price
             price_from_peak = (current_price - highest_price) / highest_price
 
-            # Log price updates every 30 seconds
             if int(time.time()) % 30 == 0:
-                logger.info(f"Dynamic protection: Token {token_address}: Current price: {current_price}, Change: {price_change*100:.2f}%, From peak: {price_from_peak*100:.2f}%")
+                logger.debug(f"Dynamic protection: Token {token_address}: Current price: {current_price}, Change: {price_change*100:.2f}%, From peak: {price_from_peak*100:.2f}%")
 
-            # Take profit at specific targets
             if current_price >= profit_target_2:
                 logger.info(f"Dynamic protection: Taking profit at 50%+ gain ({price_change*100:.2f}%)")
                 if execute_sell(token_address, buy_amount, 0.02):
                     return "SOLD"
             elif current_price >= profit_target_1:
-                # If we're at 20%+ profit, use a tighter trailing stop (3%)
                 if price_from_peak <= -0.03:
                     logger.info(f"Dynamic protection: Taking profit with tight trailing stop at {price_change*100:.2f}% gain")
                     if execute_sell(token_address, buy_amount, 0.02):
                         return "SOLD"
 
-            # Standard trailing stop
             elif current_price <= highest_price * (1 - TRAILING_STOP_PERCENTAGE):
                 logger.info(f"Dynamic protection: Triggering trailing stop at {current_price} (down {TRAILING_STOP_PERCENTAGE*100:.1f}% from {highest_price})")
                 if execute_sell(token_address, buy_amount, 0.02):
                     return "SOLD"
 
-            # Stop loss if price drops significantly below buy price
-            elif current_price <= buy_price * 0.85:  # 15% loss
+            elif current_price <= buy_price * 0.85:
                 logger.warning(f"Dynamic protection: Stop loss triggered at {price_change*100:.2f}% loss")
                 if execute_sell(token_address, buy_amount, 0.05):
                     return "SOLD"
@@ -193,7 +324,6 @@ def dynamic_protection_mode(token_address, buy_price, buy_amount):
         time.sleep(1)
 
     logger.info(f"Dynamic protection: Time-based exit for {token_address}")
-    # Before time-based exit, check if we're in profit
     if current_price > buy_price:
         logger.info(f"Dynamic protection: Time-based exit with profit of {price_change*100:.2f}%")
         if execute_sell(token_address, buy_amount, 0.02):
@@ -205,6 +335,16 @@ def dynamic_protection_mode(token_address, buy_price, buy_amount):
     return "CONTINUE"
 
 def tiered_smart_exit(token_address, buy_price, buy_amount):
+    from config import my_address, initialize_credentials
+    if not my_address:
+        logger.debug("Wallet address not initialized in tiered_smart_exit. Initializing credentials...")
+        initialize_credentials()
+        from config import my_address
+        if not my_address:
+            logger.error("Failed to initialize wallet address in tiered_smart_exit. Cannot proceed.")
+            return "FAILED"
+        logger.debug(f"Wallet address initialized in tiered_smart_exit: {my_address}")
+
     logger.info(f"Starting tiered smart exit for {token_address}")
 
     current_amount = buy_amount
@@ -217,13 +357,10 @@ def tiered_smart_exit(token_address, buy_price, buy_amount):
             return "SOLD"
         return "CONTINUE"
 
-    # Track the highest price seen
     highest_price = buy_price
     start_time = time.time()
     last_log_time = 0
-
-    # Maximum time to wait for each tier (10 minutes)
-    max_tier_wait_time = 600
+    max_tier_wait_time = 150
     tier_start_time = time.time()
 
     while current_multiplier and current_amount > 0:
@@ -236,20 +373,17 @@ def tiered_smart_exit(token_address, buy_price, buy_amount):
         highest_price = max(highest_price, current_price)
         price_change = (current_price - buy_price) / buy_price
         price_from_peak = (current_price - highest_price) / highest_price
-
-        # Log status every minute
         current_time = time.time()
+
         if current_time - last_log_time >= 60:
-            logger.info(f"Tiered exit: Token {token_address}: Current price: {current_price}, "
+            logger.debug(f"Tiered exit: Token {token_address}: Current price: {current_price}, "
                        f"Target: {buy_price * current_multiplier} ({current_multiplier}x), "
                        f"Change: {price_change*100:.2f}%, From peak: {price_from_peak*100:.2f}%")
             last_log_time = current_time
 
         target_price = buy_price * current_multiplier
 
-        # If we've reached the target price for this tier
         if current_price >= target_price:
-            # Sell 25% of the current amount
             amount_to_sell = current_amount * 0.25
             logger.info(f"Tiered exit: Selling 25% at {current_multiplier}x target ({price_change*100:.2f}% profit)")
 
@@ -257,11 +391,10 @@ def tiered_smart_exit(token_address, buy_price, buy_amount):
                 current_amount -= amount_to_sell
                 logger.info(f"Tiered exit: Sold successfully. Remaining: {current_amount}")
 
-                # Move to next tier
                 current_multiplier = exit_multipliers.pop(0) if exit_multipliers else None
                 if current_multiplier:
-                    logger.info(f"Tiered exit: Moving to next target: {current_multiplier}x")
-                    tier_start_time = time.time()  # Reset the timer for the next tier
+                    logger.debug(f"Tiered exit: Moving to next target: {current_multiplier}x")
+                    tier_start_time = time.time()
                 else:
                     logger.info("Tiered exit: All targets reached, selling remaining position")
                     if current_amount > 0 and execute_sell(token_address, current_amount, 0.02):
@@ -269,26 +402,23 @@ def tiered_smart_exit(token_address, buy_price, buy_amount):
             else:
                 logger.warning("Tiered exit: Failed to sell at target price, will retry")
 
-        # If price drops significantly from the peak, use trailing stop
-        elif highest_price > buy_price and price_from_peak <= -0.07:  # 7% drop from peak
+        elif highest_price > buy_price and price_from_peak <= -0.07:
             logger.warning(f"Tiered exit: Trailing stop triggered. Down {abs(price_from_peak)*100:.2f}% from peak")
             if execute_sell(token_address, current_amount, 0.03):
                 return "SOLD"
 
-        # If we've waited too long for this tier, move to the next one
         elif time.time() - tier_start_time > max_tier_wait_time:
             logger.warning(f"Tiered exit: Timeout waiting for {current_multiplier}x target, moving to next tier")
             current_multiplier = exit_multipliers.pop(0) if exit_multipliers else None
             if current_multiplier:
-                logger.info(f"Tiered exit: Moving to next target: {current_multiplier}x")
+                logger.debug(f"Tiered exit: Moving to next target: {current_multiplier}x")
                 tier_start_time = time.time()
             else:
-                logger.info("Tiered exit: All tiers timed out, selling remaining position")
+                logger.debug("Tiered exit: All tiers timed out, selling remaining position")
                 if current_amount > 0 and execute_sell(token_address, current_amount, 0.03):
                     return "SOLD"
 
-        # If total time exceeds 15 minutes, sell everything
-        if time.time() - start_time > 900:  # 15 minutes
+        if time.time() - start_time > 600:
             logger.warning("Tiered exit: Maximum time reached (15 minutes), selling remaining position")
             if current_amount > 0 and execute_sell(token_address, current_amount, 0.03):
                 return "SOLD"
@@ -296,7 +426,6 @@ def tiered_smart_exit(token_address, buy_price, buy_amount):
 
         time.sleep(1)
 
-    # If we still have tokens left, sell them
     if current_amount > 0:
         logger.info("Tiered exit: Selling remaining position")
         if execute_sell(token_address, current_amount, 0.03):
@@ -304,25 +433,174 @@ def tiered_smart_exit(token_address, buy_price, buy_amount):
 
     return "CONTINUE"
 
-def intelligent_adaptive_liquidation(token_address, buy_price, buy_amount):
+def time_based_exit(token_address, buy_price, buy_amount, sell_time_minutes):
+    logger.info(f"Starting time-based exit for {token_address} after {sell_time_minutes} minutes")
+
+    from config import my_address, initialize_credentials
+    if not my_address:
+        logger.debug("Wallet address not initialized in time_based_exit. Initializing credentials...")
+        initialize_credentials()
+        from config import my_address
+        if not my_address:
+            logger.error("Failed to initialize wallet address in time_based_exit. Cannot proceed.")
+            return "FAILED"
+        logger.debug(f"Wallet address initialized in time_based_exit: {my_address}")
+
+    sell_time_seconds = sell_time_minutes * 60
+    start_time = time.time()
+    highest_price = buy_price
+    last_log_time = 0
+
+    import builtins
+    token_monitor_instance = getattr(builtins, 'token_monitor_manager', None)
+    if token_monitor_instance is not None:
+        logger.debug(f"Time-based exit: Found token_monitor_manager via builtins")
+    else:
+        logger.warning(f"Time-based exit: token_monitor_manager not available via builtins")
+
+    expected_sell_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time + sell_time_seconds))
+    logger.debug(f"Time-based exit: Will sell token {token_address} at approximately {expected_sell_time}")
+    token_contract = w3.eth.contract(address=token_address, abi=token_abi)
+    initial_balance = token_contract.functions.balanceOf(my_address).call()
+
+    if initial_balance == 0:
+        logger.warning(f"Time-based exit: No tokens to sell for {token_address}, balance is 0")
+
+        if token_monitor_instance is not None:
+            try:
+                active_monitors = getattr(token_monitor_instance, 'active_monitors', {})
+                if token_address in active_monitors:
+                    monitor = active_monitors[token_address]
+                    monitor.sold = True
+                    monitor.sold_event.set()
+                    logger.debug(f"Time-based exit: Marked token {token_address} as sold in TokenMonitor (zero balance)")
+            except Exception as e:
+                logger.debug(f"Time-based exit: Error marking zero-balance token as sold: {str(e)}")
+
+        return "SOLD"
+
+    logger.debug(f"Time-based exit: Initial token balance is {initial_balance}")
+
+    while time.time() - start_time <= sell_time_seconds:
+        current_time = time.time()
+        current_price = get_current_price(token_address)
+        if current_price > 0:
+            highest_price = max(highest_price, current_price)
+            price_change = (current_price - buy_price) / buy_price
+
+            if current_time - last_log_time >= 30:
+                time_remaining = sell_time_seconds - (current_time - start_time)
+                logger.debug(f"Time-based exit: {int(time_remaining)} seconds remaining. Current price: {current_price}, Change: {price_change*100:.2f}%")
+                last_log_time = current_time
+                current_balance = token_contract.functions.balanceOf(my_address).call()
+                if current_balance == 0:
+                    logger.warning(f"Time-based exit: Token balance is now 0, token may have already been sold or transferred")
+                    if token_monitor_instance is not None:
+                        try:
+                            active_monitors = getattr(token_monitor_instance, 'active_monitors', {})
+                            if token_address in active_monitors:
+                                monitor = active_monitors[token_address]
+                                monitor.sold = True
+                                monitor.sold_event.set()
+                                logger.debug(f"Time-based exit: Marked token {token_address} as sold in TokenMonitor (mid-wait)")
+                        except Exception as e:
+                            logger.debug(f"Time-based exit: Error marking mid-wait token as sold: {str(e)}")
+
+                    return "SOLD"
+
+        time.sleep(1)
+
+    logger.info(f"Time-based exit: {sell_time_minutes} minutes elapsed, selling token {token_address}")
+    final_balance = token_contract.functions.balanceOf(my_address).call()
+    if final_balance == 0:
+        logger.warning(f"Time-based exit: No tokens to sell, balance is 0")
+        if token_monitor_instance is not None:
+            try:
+                active_monitors = getattr(token_monitor_instance, 'active_monitors', {})
+                if token_address in active_monitors:
+                    monitor = active_monitors[token_address]
+                    monitor.sold = True
+                    monitor.sold_event.set()
+                    logger.debug(f"Time-based exit: Marked token {token_address} as sold in TokenMonitor (end of wait)")
+
+            except Exception as e:
+                logger.debug(f"Time-based exit: Error marking end-of-wait token as sold: {str(e)}")
+
+        return "SOLD"
+
+    current_price = get_current_price(token_address)
+    if current_price > 0:
+        price_change = (current_price - buy_price) / buy_price
+        logger.debug(f"Time-based exit: Final price: {current_price}, Change: {price_change*100:.2f}%")
+    else:
+        logger.warning(f"Time-based exit: Unable to get current price for {token_address}")
+
+    retry_count = 0
+    for slippage in [0.01, 0.03, 0.05, 0.10]:
+        retry_count += 1
+        logger.debug(f"Time-based exit: Sell attempt #{retry_count} with {slippage*100:.1f}% slippage")
+        logger.info(f"Time-based exit: Executing sell for {token_address} with {slippage*100:.1f}% slippage, balance: {final_balance}")
+
+        if execute_sell(token_address, final_balance, slippage):
+            logger.info(f"Time-based exit: Successfully sold token {token_address}")
+
+            if token_monitor_instance is not None:
+                try:
+                    active_monitors = getattr(token_monitor_instance, 'active_monitors', {})
+                    if token_address in active_monitors:
+                        monitor = active_monitors[token_address]
+                        monitor.sold = True
+                        monitor.sold_event.set()
+                        logger.debug(f"Time-based exit: Double-checking token {token_address} is marked as sold")
+                except Exception as e:
+                    logger.debug(f"Time-based exit: Error in double-check marking token as sold: {str(e)}")
+
+            return "SOLD"
+        else:
+            logger.warning(f"Time-based exit: Sell attempt #{retry_count} failed, will retry with higher slippage")
+            time.sleep(2)
+
+    logger.warning(f"Time-based exit: Failed to sell token {token_address} after multiple attempts")
+    return "CONTINUE"
+
+def intelligent_adaptive_liquidation(token_address, buy_price, buy_amount, sell_time=None):
     logger.info("Starting intelligent adaptive liquidation strategy")
 
-    result = initial_monitoring(token_address, buy_price, buy_amount)
-    if result == "SOLD":
-        return
+    from config import my_address, initialize_credentials
+    if not my_address:
+        logger.debug("Wallet address not initialized in intelligent_adaptive_liquidation. Initializing credentials...")
+        initialize_credentials()
+        from config import my_address
+        if not my_address:
+            logger.error("Failed to initialize wallet address in intelligent_adaptive_liquidation. Cannot proceed.")
+            return "FAILED"
+        logger.debug(f"Wallet address initialized in intelligent_adaptive_liquidation: {my_address}")
 
-    result = dynamic_protection_mode(token_address, buy_price, buy_amount)
-    if result == "SOLD":
-        return
+    if sell_time is not None:
+        logger.info(f"Using time-based exit strategy with {sell_time} minute(s) timeout for token {token_address}")
+        result = time_based_exit(token_address, buy_price, buy_amount, sell_time)
+        if result == "SOLD":
+            logger.info(f"Token {token_address} sold after {sell_time} minutes via time-based exit")
+            return "SOLD"
+    else:
+        result = initial_monitoring(token_address, buy_price, buy_amount)
+        if result == "SOLD":
+            return "SOLD"
 
-    result = tiered_smart_exit(token_address, buy_price, buy_amount)
+        result = dynamic_protection_mode(token_address, buy_price, buy_amount)
+        if result == "SOLD":
+            return "SOLD"
 
-    # If we reach here and the token wasn't sold, make sure we remove it from monitoring
+        result = tiered_smart_exit(token_address, buy_price, buy_amount)
+
     import sys
     if 'token_monitor_manager' in sys.modules and 'token_monitor_manager' in globals() and result != "SOLD":
         try:
             from snipe import token_monitor_manager
             if token_monitor_manager is not None:
                 token_monitor_manager.remove_token(token_address)
+                logger.debug(f"Removed token {token_address} from monitoring")
         except Exception as e:
-            file_logger.error(f"Error removing token from monitor: {str(e)}")
+            logger.error(f"Error removing token from monitor: {str(e)}")
+
+    return result

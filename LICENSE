@@ -1,18 +1,46 @@
+SnipeGenius License Agreement
+=============================
+
 Software Name: SnipeGenius
-Version: 1.5.3
 Author: Fahd El Haraka
+Website: https://web3dev.ma
 Contact: fahd@web3dev.ma
 
-License Agreement:
+Effective Date: Thu 10 Apr 2025 22:00
 
-This software and associated documentation files (the "Software") are proprietary to Fahd El Haraka. Unauthorized copying, modification, use, distribution, or any form of exploitation of this Software is prohibited.
+This license governs the use of the software known as "SnipeGenius" (the "Software"). By using, downloading, or accessing the Software, you agree to the terms of this License.
 
-Permission to use the Software for internal business purposes may be granted upon request. For permissions, inquiries, and other matters, contact the Author at fahd@web3dev.ma.
+1. Grant of Use
+---------------
+You are granted a limited, non-exclusive, non-transferable, revocable license to use the Software for **personal and non-commercial** purposes only. This includes:
+- Running the Software for personal use.
+- Using the Software to generate personal profit (e.g., through trading), provided the Software itself is not monetized or distributed.
 
-Personal use only.
+2. Restrictions
+---------------
+You may **not**, under any circumstances:
+- Sell, resell, sublicense, rent, lease, or offer the Software as a paid product or service.
+- Modify, adapt, or create derivative works of the Software for redistribution.
+- Distribute, publish, or share the Software in any form, whether modified or unmodified.
+- Use the Software in any manner that violates applicable laws or regulations.
 
-This license agreement must be included with all copies or substantial portions of the Software.
+3. Contributions
+----------------
+Users may propose improvements or bug fixes through pull requests or commit suggestions via the official GitHub repository. All contributions will be reviewed by the Author, who reserves the right to accept or reject them. All accepted contributions become the property of the Author.
 
-No warranties of any kind are given, and the Author is not liable for any damages, losses or other consequences incurred as a result of using the Software.
+4. No Warranty
+--------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DAMAGES OR LOSSES ARISING FROM THE USE OF THE SOFTWARE.
 
-© Copyright 2023-2025 Fahd El Haraka. All Rights Reserved.
+5. Ownership
+------------
+All intellectual property rights in the Software remain the exclusive property of Fahd El Haraka. This License does not grant you any ownership rights in the Software.
+
+6. Termination
+--------------
+This License is effective until terminated. It will terminate automatically if you fail to comply with any term of this License. Upon termination, you must cease all use and delete all copies of the Software.
+
+For permissions or inquiries, contact the Author at: fahd@web3dev.ma
+Official Website: https://web3dev.ma
+
+© 2023–2025 Fahd El Haraka. All rights reserved.

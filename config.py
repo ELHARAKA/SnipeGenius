@@ -1,5 +1,5 @@
 # SnipeGenius 🥞 (PancakeSwap)
-# Version: 2.6
+# Version: 3.0
 # Developed by Fahd El Haraka ©
 # Email: fahd@web3dev.ma
 # Telegram: @thisiswhosthis
@@ -25,7 +25,7 @@ def display_splash():
     print(colored(ascii_art, 'white'))
 
     print("--------------------------------------------------------")
-    print(colored("SnipeGenius 🥞 Version: 2.6", 'yellow'))
+    print(colored("SnipeGenius 🥞 Version: 3.0", 'yellow'))
     print("--------------------------------------------------------\n")
     print("Developed by " + colored("Fahd El Haraka ©", 'red'))
     print("Telegram: " + colored("@thisiswhosthis", 'red'))
@@ -35,8 +35,11 @@ def display_splash():
 
 display_splash()
 
+# Set up a single unified logger
 log_format = '[%(asctime)s] %(message)s'
 date_format = '%Y-%m-%d %H:%M:%S'
+
+# Create console handler with colored output
 stream_handler = colorlog.StreamHandler()
 stream_handler.setFormatter(colorlog.ColoredFormatter(
     '%(log_color)s' + log_format,
@@ -50,24 +53,27 @@ stream_handler.setFormatter(colorlog.ColoredFormatter(
     }
 ))
 
-stream_handler.setLevel(logging.INFO)
-logger = logging.getLogger('logger')
-logger.setLevel(logging.INFO)
+# Create file handler that always logs everything
 file_handler = logging.FileHandler('trade_history.log')
-file_handler.setLevel(logging.INFO)
+file_handler.setLevel(logging.DEBUG)  # File always gets all logs
 file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+
+# Set up main logger
+logger = logging.getLogger('snipegenius')
+logger.setLevel(logging.DEBUG)  # Logger itself can process all levels
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
-file_logger = logging.getLogger('file_logger')
-file_logger.setLevel(logging.INFO)
-file_file_handler = logging.FileHandler('trade_history.log')
-file_file_handler.setLevel(logging.INFO)
-file_file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
-file_logger.addHandler(file_file_handler)
+
+# Default console to INFO level initially
+stream_handler.setLevel(logging.INFO)
+
+# Make sure we don't get duplicate logs
+logger.propagate = False
 
 minimum_sleep = 3
 my_address = ""
 private_key = ""
+bscscan_api_key = ""
 WEB3_PROVIDER = "https://bsc-dataseed3.binance.org"
 
 w3 = Web3(Web3.HTTPProvider(WEB3_PROVIDER))
@@ -76,36 +82,46 @@ w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 if w3.is_connected():
     logger.info("Connected to node.")
 else:
-    logger.error("Node connection failed.")
     exit(1)
 
 def initialize_logging(verbosity):
-    log_level = logging.INFO
     if verbosity == 2:
-        log_level = logging.DEBUG
-        file_logger.addHandler(stream_handler)
+        stream_handler.setLevel(logging.DEBUG)
+        logger.debug("Verbose logging enabled.")
+    else:
+        stream_handler.setLevel(logging.INFO)
 
-    logger.setLevel(log_level)
-    file_logger.setLevel(log_level)
-    stream_handler.setLevel(log_level)
-
-def update_credentials(address, key):
-    global my_address, private_key
+def update_credentials(address, key, api_key=None):
+    global my_address, private_key, bscscan_api_key
     my_address = address
     private_key = key
+    if api_key:
+        bscscan_api_key = api_key
+
+def load_api_key():
+    global bscscan_api_key
+    from wallet import get_api_key
+    api_key = get_api_key()
+    if api_key:
+        bscscan_api_key = api_key
+    return api_key
 
 def initialize_credentials():
-    global my_address, private_key
-    my_address, private_key = get_credentials()
+    global my_address, private_key, bscscan_api_key
+    load_api_key()
+    my_address, private_key, api_key = get_credentials()
+    if api_key:
+        bscscan_api_key = api_key
 
-    # Validate credentials
     if not my_address or not private_key:
         logger.error("Failed to load wallet credentials. Please check your wallet.txt file or re-import your wallet.")
-        file_logger.error("Failed to load wallet credentials. Please check your wallet.txt file or re-import your wallet.")
     else:
-        file_logger.info(f"Credentials loaded successfully. Wallet address: {my_address}")
+        logger.info(f"Credentials loaded successfully. Wallet address: {my_address}")
 
-    update_credentials(my_address, private_key)
+    if not bscscan_api_key:
+        logger.error("Failed to load BSCScan API key. Please check your api.txt file.")
+
+    update_credentials(my_address, private_key, bscscan_api_key)
 
 pair_created_topic = '0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9'
 wbnb_address = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
@@ -126,9 +142,9 @@ wbnb = w3.eth.contract(address=wbnb_address, abi=wbnb_abi)
 
 # Exit strategy configuration
 EXIT_STRATEGY_ENABLED = True
-INITIAL_MONITORING_DURATION = 180  # 3 minutes for phase 1
-DYNAMIC_PROTECTION_DURATION = 300  # 5 minutes for phase 2
-TRAILING_STOP_PERCENTAGE = 0.05  # 5% trailing stop (more sensitive)
-TIERED_EXIT_MULTIPLIERS = [1.5, 2, 3]  # 1.5x, 2x and 3x profit targets
+INITIAL_MONITORING_DURATION = 240
+DYNAMIC_PROTECTION_DURATION = 300
+TRAILING_STOP_PERCENTAGE = 0.05
+TIERED_EXIT_MULTIPLIERS = [1.5, 2, 3]
 pair_created_event_abi = next(event_abi for event_abi in factory_abi if event_abi['type'] == 'event' and event_abi['name'] == 'PairCreated')
 event_filter = w3.eth.filter({'address': factory_address, 'topics': [pair_created_topic]})
