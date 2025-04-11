@@ -234,19 +234,14 @@ def check_token_safety(tokentobuy, chain_id, min_safety_score):
         # Step 1: Perform pre-check for contract verification and isOwner function
         logger.debug(f"Performing pre-check Step 1 for token {tokentobuy}")
         is_pre_check_1_safe = perform_pre_check_step_1(tokentobuy)
-
         if not is_pre_check_1_safe:
-            logger.warning(f"Token failed pre-check Step 1. Skipping further checks.")
             return False, 0
 
-        # Temporarily commenting out Step 2 checks
         # Step 2: Perform pre-check for similar contracts
-        # logger.debug(f"Performing pre-check Step 2 for token {tokentobuy} in 30 seconds")
-        # is_pre_check_2_safe = perform_pre_check_step_2(tokentobuy)
-        #
-        # if not is_pre_check_2_safe:
-        #     logger.warning(f"Token failed pre-check Step 2. Skipping further checks.")
-        #     return False, 0
+        logger.debug(f"Performing pre-check Step 2 for token {tokentobuy} in 30 seconds")
+        is_pre_check_2_safe = perform_pre_check_step_2(tokentobuy)
+        if not is_pre_check_2_safe:
+            return False, 0
 
         # If token passed both pre-check steps, proceed with goplus security checks
         logger.debug(f"Token passed pre-checks. Proceeding with goplus security check in 30 seconds...")
