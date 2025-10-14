@@ -17,6 +17,11 @@ import time, sys
 from config import *
 from snipegenius import check_token_safety
 from exit_strategy import intelligent_adaptive_liquidation
+from web3.exceptions import ContractLogicError
+
+SIMULATION_MIN_BUY_EFFICIENCY = 0.75
+SIMULATION_MIN_SELL_EFFICIENCY = 0.70
+SIMULATION_MAX_GAS_MULTIPLIER = 3
 
 def get_and_increment_nonce(w3, address):
     nonce = w3.eth.get_transaction_count(address)
@@ -63,6 +68,20 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, w3, bnb_rese
         logger.warning(f"Scam risk, score: {score}%. Aborting.")
         return
 
+    simulation_result = simulate_buy_and_sell(
+        router,
+        w3,
+        my_address,
+        wbnb_address,
+        tokentobuy,
+        amount_in,
+        amount_out_min
+    )
+
+    if not simulation_result["success"]:
+        logger.warning(f"Skipping purchase for {tokentobuy} due to failed trade simulation: {simulation_result['reason']}")
+        return
+
     from coinOps import get_bnb_balance
     bnb_balance = get_bnb_balance()
     human_readable_bnb = Web3.from_wei(bnb_balance, 'ether')
@@ -86,15 +105,17 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, w3, bnb_rese
         logger.debug(f"Minimum amount out: {Web3.from_wei(amount_out_min, 'ether') * (10 ** (18 - token_info['decimals']))} {token_info['symbol']}")
 
         try:
-            gas_estimate = router.functions.swapExactETHForTokens(
-                amount_out_min,
-                [wbnb_address, tokentobuy],
-                my_address,
-                int(time.time()) + 120
-            ).estimate_gas({
-                'from': my_address,
-                'value': bnb_amount_needed
-            })
+            gas_estimate = simulation_result.get("buy_gas", 0)
+            if not gas_estimate:
+                gas_estimate = router.functions.swapExactETHForTokens(
+                    amount_out_min,
+                    [wbnb_address, tokentobuy],
+                    my_address,
+                    int(time.time()) + 120
+                ).estimate_gas({
+                    'from': my_address,
+                    'value': bnb_amount_needed
+                })
 
             logger.debug(f"Gas estimate successful: {gas_estimate}")
         except Exception as gas_error:
@@ -147,7 +168,10 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, w3, bnb_rese
 
                     if token_balance > 0:
                         human_readable_balance = token_balance / (10 ** token_info['decimals'])
-                        logger.info(f"Successfully purchased {human_readable_balance} {token_info['symbol']} tokens")
+                        logger.info(
+                            f"Successfully purchased {human_readable_balance} {token_info['symbol']} tokens. "
+                            f"Simulated sell would return {Web3.from_wei(simulation_result['expected_sell_bnb'], 'ether')} BNB"
+                        )
                         buy_price = bnb_amount_needed / token_balance
 
                         if sell_time is not None:
@@ -268,6 +292,143 @@ def execute_buy(amount_out_min, pair_address, wbnb_address, router, w3, bnb_rese
         logger.debug(f"An error occurred: {str(e)}")
 
 pair_created_event_abi = [event_abi for event_abi in factory_abi if event_abi['type'] == 'event' and event_abi['name'] == 'PairCreated'][0]
+
+def simulate_buy_and_sell(router, w3, my_address, wbnb_address, token_address, amount_in, amount_out_min):
+    result = {
+        "success": False,
+        "reason": "",
+        "expected_tokens": 0,
+        "actual_tokens": 0,
+        "expected_sell_bnb": 0,
+        "buy_gas": 0,
+        "sell_gas": 0,
+    }
+
+    path_buy = [wbnb_address, token_address]
+    path_sell = [token_address, wbnb_address]
+
+    try:
+        expected_buy_amounts = router.functions.getAmountsOut(amount_in, path_buy).call()
+        expected_tokens = expected_buy_amounts[-1]
+        result["expected_tokens"] = expected_tokens
+        logger.debug(
+            f"Simulation: Expected token output for {Web3.from_wei(amount_in, 'ether')} BNB is {expected_tokens} units"
+        )
+    except Exception as estimation_error:
+        result["reason"] = f"Unable to estimate buy amounts: {estimation_error}"
+        logger.warning(f"Trade simulation failed during buy estimation: {estimation_error}")
+        return result
+
+    try:
+        simulated_buy_amounts = router.functions.swapExactETHForTokens(
+            0,
+            path_buy,
+            my_address,
+            int(time.time()) + 120
+        ).call({
+            'from': my_address,
+            'value': amount_in
+        })
+        actual_tokens = simulated_buy_amounts[-1]
+        result["actual_tokens"] = actual_tokens
+        logger.debug(f"Simulation: Call buy output is {actual_tokens} tokens")
+    except ContractLogicError as simulation_error:
+        result["reason"] = f"Buy simulation reverted: {simulation_error}"
+        logger.warning(f"Trade simulation buy call reverted: {simulation_error}")
+        return result
+    except Exception as simulation_error:
+        result["reason"] = f"Buy simulation error: {simulation_error}"
+        logger.warning(f"Unexpected error during buy simulation: {simulation_error}")
+        return result
+
+    if actual_tokens <= 0:
+        result["reason"] = "Buy simulation returned zero tokens"
+        logger.warning("Trade simulation determined zero tokens would be received")
+        return result
+
+    if expected_tokens <= 0:
+        result["reason"] = "Expected token output is zero"
+        logger.warning("Trade simulation expected zero tokens from buy")
+        return result
+
+    buy_efficiency = actual_tokens / expected_tokens
+    logger.debug(f"Simulation: Buy efficiency {buy_efficiency:.2%}")
+
+    if buy_efficiency < SIMULATION_MIN_BUY_EFFICIENCY:
+        result["reason"] = (
+            f"Buy efficiency too low ({buy_efficiency:.2%}) indicating potential transfer tax or honeypot"
+        )
+        logger.warning(result["reason"])
+        return result
+
+    try:
+        expected_sell_amounts = router.functions.getAmountsOut(actual_tokens, path_sell).call()
+        expected_sell_bnb = expected_sell_amounts[-1]
+        result["expected_sell_bnb"] = expected_sell_bnb
+        logger.debug(f"Simulation: Expected sell output is {Web3.from_wei(expected_sell_bnb, 'ether')} BNB")
+    except Exception as sell_estimation_error:
+        result["reason"] = f"Unable to estimate sell amounts: {sell_estimation_error}"
+        logger.warning(f"Trade simulation failed during sell estimation: {sell_estimation_error}")
+        return result
+
+    if expected_sell_bnb <= 0:
+        result["reason"] = "Sell simulation returned zero BNB"
+        logger.warning("Trade simulation determined zero BNB would be received when selling")
+        return result
+
+    sell_efficiency = expected_sell_bnb / amount_in
+    logger.debug(f"Simulation: Sell efficiency {sell_efficiency:.2%}")
+
+    if sell_efficiency < SIMULATION_MIN_SELL_EFFICIENCY:
+        result["reason"] = (
+            f"Sell efficiency too low ({sell_efficiency:.2%}) suggesting high taxes or illiquidity"
+        )
+        logger.warning(result["reason"])
+        return result
+
+    try:
+        buy_gas = router.functions.swapExactETHForTokens(
+            amount_out_min,
+            path_buy,
+            my_address,
+            int(time.time()) + 120
+        ).estimate_gas({
+            'from': my_address,
+            'value': amount_in
+        })
+        result["buy_gas"] = buy_gas
+        logger.debug(f"Simulation: Buy gas estimate {buy_gas}")
+    except Exception as gas_error:
+        logger.debug(f"Simulation: Unable to estimate buy gas via simulation: {gas_error}")
+
+    if result["buy_gas"] and result["buy_gas"] > 500000 * SIMULATION_MAX_GAS_MULTIPLIER:
+        result["reason"] = (
+            f"Estimated buy gas {result['buy_gas']} exceeds safe multiplier"
+        )
+        logger.warning(result["reason"])
+        return result
+
+    try:
+        sell_gas = router.functions.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            actual_tokens,
+            0,
+            path_sell,
+            my_address,
+            int(time.time()) + 120
+        ).estimate_gas({
+            'from': my_address
+        })
+        result["sell_gas"] = sell_gas
+        logger.debug(f"Simulation: Sell gas estimate {sell_gas}")
+    except ContractLogicError as sell_gas_error:
+        logger.debug(f"Simulation: Sell gas estimation reverted (likely allowance issue): {sell_gas_error}")
+    except ValueError as sell_gas_error:
+        logger.debug(f"Simulation: Sell gas estimation unavailable: {sell_gas_error}")
+    except Exception as sell_gas_error:
+        logger.debug(f"Simulation: Unexpected error estimating sell gas: {sell_gas_error}")
+
+    result["success"] = True
+    return result
 
 def check_liquidity(pair_address, wbnb_address, w3):
     pair_contract = w3.eth.contract(address=pair_address, abi=pair_abi)
